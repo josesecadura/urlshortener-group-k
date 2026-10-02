@@ -15,11 +15,11 @@ Each row below is a **grown** feature: a card copied from the Feature Catalogue,
 
 | Feature card | Owner module | Weight | Event-coupled |
 | --- | --- | --- | --- |
-| [docs/features/0004-async-click-ingestion-via-outbox-broker.md](docs/features/0004-async-click-ingestion-via-outbox-broker.md) | clicks | 21 | Y |
+| [docs/features/0004-async-click-ingestion.md](docs/features/0004-async-click-ingestion.md) | clicks | 21 | Y |
 | [docs/features/0005-browser-and-platform-detection.md](docs/features/0005-browser-and-platform-detection.md) | analytics | 8 | Y |
-| [docs/features/0006-redirect-cache-with-cross-replica-invalidation.md](docs/features/0006-redirect-cache-with-cross-replica-invalidation.md) | links | 21 | Y |V
-| [docs/features/0007-qr-code-generation.md](docs/features/0007-qr-code-generation.md) | links | 8 | N |
-| [docs/features/0008-url-management-deactivation.md](docs/features/0008-url-management-deactivation.md) | links | 13 | N |
+| [docs/features/0006-redirect-cache-with-cross-replica](docs/features/0006-redirect-cache-with-cross-replica.md) | links | 21 | Y |
+| [docs/features/0007-qr-code-generator.md](docs/features/0007-qr-code-generator.md) | links | 8 | N |
+| [docs/features/0008-url-management.md](docs/features/0008-url-management.md) | links | 13 | N |
 | [docs/features/0009-url-expiration.md](docs/features/0009-url-expiration.md) | links | 13 | N |
 
 

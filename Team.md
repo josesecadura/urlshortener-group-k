@@ -4,8 +4,8 @@
 
 | Personal name | UNIZAR email (`…@unizar.es`) | git `user.name` | GitHub id | Owned features | Integrator |
 | --- | --- | --- | --- | --- | --- |
-| Jose Secadura Del Olmo | 815327@unizar.es | Jose Secadura | @josesecadura | docs/features/0006-redirect-cache-with-cross-replica-invalidation.md, docs/features/0007-qr-code-generation.md | **yes** |
-| Sergio Saura Oliva | 838585@unizar.es | Sergio Saura Oliva | @PONER_GITHUB |  | no |
+| Jose Secadura Del Olmo | 815327@unizar.es | Jose Secadura | @josesecadura | docs/features/0006-redirect-cache-with-cross-replica.md, docs/features/0007-qr-code-generator.md | **yes** |
+| Sergio Saura Oliva | 838585@unizar.es | Sergio Saura Oliva | @sergiosaura | docs/features/0005-browser-and-platform-detection.md,  docs/features/0008-url-management.md | no |
 | Jairo Jiménez Garrote | 901439@unizar.es | Jairo Jiménez Garrote | @PONER_GITHUB |  | no |
 
 
