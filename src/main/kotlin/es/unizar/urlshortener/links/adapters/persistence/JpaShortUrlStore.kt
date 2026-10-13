@@ -12,4 +12,7 @@ class JpaShortUrlStore(
     override fun insert(shortUrl: ShortUrl): ShortUrl = repository.save(shortUrl.toEntity()).toDomain()
 
     override fun findByHash(hash: String): Optional<ShortUrl> = repository.findById(hash).map { it.toDomain() }
+
+    override fun delete(hash: String) = repository.deleteById(hash)
+
 }

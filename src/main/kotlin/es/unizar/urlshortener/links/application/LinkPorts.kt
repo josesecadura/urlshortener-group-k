@@ -10,6 +10,8 @@ interface ShortUrlStore {
     fun insert(shortUrl: ShortUrl): ShortUrl
 
     fun findByHash(hash: String): Optional<ShortUrl>
+
+    fun delete(hash: String)
 }
 
 @SecondaryPort
@@ -38,6 +40,10 @@ class InvalidUrlException(
 class LinkNotFoundException(
     hash: String,
 ) : RuntimeException("[$hash] is not known")
+
+class UrlExpiredException(
+    hash: String,
+):RuntimeException("[$hash] has expired")
 
 @PrimaryPort
 fun interface CreateShortUrl {

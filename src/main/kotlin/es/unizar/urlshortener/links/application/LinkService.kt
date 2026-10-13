@@ -31,6 +31,11 @@ class LinkService(
     @Transactional
     override fun redirect(hash: String): Redirection {
         val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
+        if(shortUrl.expirationTime!=null &&  Instant.now().isBefore(shortUrl.expirationTime)) {
+            //url caducada, se elimina de BD
+            store.delete(hash)
+            throw UrlExpiredException(hash)
+        }
         events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
         return Redirection(target = shortUrl.target)
     }

@@ -10,3 +10,8 @@ data class ShortUrlCreatedEvent(
     val target: String,
     val createdAt: Instant = Instant.now(),
 )
+
+data class UrlExpiration(
+    val hash: String,
+    var expirationTime: Instant? =null,
+)

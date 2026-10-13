@@ -6,4 +6,5 @@ data class ShortUrl(
     val hash: String,
     val target: String,
     val createdAt: Instant = Instant.now(),
+    var expirationTime: Instant? =null,
 )
