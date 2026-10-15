@@ -36,6 +36,7 @@ dependencies {
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.validation) // para poder usar @Future
     implementation(libs.modulith.starter.core)
     implementation(libs.modulith.starter.jdbc)
     implementation(libs.jmolecules.hexagonal)
@@ -45,6 +46,9 @@ dependencies {
     runtimeOnly(libs.kotlin.reflect)
     runtimeOnly(libs.hsqldb)
     runtimeOnly(libs.postgresql)
+
+    implementation(libs.shedlock.spring)
+    implementation(libs.shedlock.provider.jdbc.template)
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.spring.boot.starter.webmvc.test)

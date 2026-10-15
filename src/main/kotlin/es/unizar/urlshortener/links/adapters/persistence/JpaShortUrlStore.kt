@@ -3,6 +3,7 @@ package es.unizar.urlshortener.links.adapters.persistence
 import es.unizar.urlshortener.links.application.ShortUrlStore
 import es.unizar.urlshortener.links.domain.ShortUrl
 import org.springframework.stereotype.Component
+import java.time.Instant
 import java.util.Optional
 
 @Component
@@ -15,4 +16,7 @@ class JpaShortUrlStore(
 
     override fun delete(hash: String) = repository.deleteById(hash)
 
+    override fun deleteExpiredURLPeriodic(now: Instant) = repository.deleteExpiredURL(now)
+
+    override fun getExpiredURLPeriodic(now: Instant): List<String> = repository.getExpiredURL(now)
 }

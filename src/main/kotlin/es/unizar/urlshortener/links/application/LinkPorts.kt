@@ -3,6 +3,7 @@ package es.unizar.urlshortener.links.application
 import es.unizar.urlshortener.links.domain.ShortUrl
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 import org.jmolecules.architecture.hexagonal.SecondaryPort
+import java.time.Instant
 import java.util.Optional
 
 @SecondaryPort
@@ -12,6 +13,10 @@ interface ShortUrlStore {
     fun findByHash(hash: String): Optional<ShortUrl>
 
     fun delete(hash: String)
+
+    fun deleteExpiredURLPeriodic(now: Instant): Int
+
+    fun getExpiredURLPeriodic(now: Instant): List<String>
 }
 
 @SecondaryPort
@@ -43,14 +48,26 @@ class LinkNotFoundException(
 
 class UrlExpiredException(
     hash: String,
-):RuntimeException("[$hash] has expired")
+) : RuntimeException("[$hash] has expired")
 
 @PrimaryPort
 fun interface CreateShortUrl {
-    fun create(url: String): CreatedShortUrl
+    fun create(
+        url: String,
+        expirationTime: Instant?,
+    ): CreatedShortUrl
+
+    // Para crear URL sin fecha de caducidad, al create de arriba no puedo poner expirationTime: Instant?=Null
+    // para valor por defecto al ser un metodo abstracto
+    fun create(url: String) = create(url, null)
 }
 
 @PrimaryPort
 fun interface RedirectShortUrl {
     fun redirect(hash: String): Redirection
+}
+
+@PrimaryPort
+fun interface ExpiredURL {
+    fun deleteExpiredURL(now: Instant): Int
 }

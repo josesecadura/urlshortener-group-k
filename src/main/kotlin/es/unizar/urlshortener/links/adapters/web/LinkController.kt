@@ -5,6 +5,7 @@ import es.unizar.urlshortener.links.application.InvalidUrlException
 import es.unizar.urlshortener.links.application.LinkNotFoundException
 import es.unizar.urlshortener.links.application.RedirectShortUrl
 import es.unizar.urlshortener.links.application.UrlExpiredException
+import jakarta.validation.constraints.Future
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 import java.net.URI
+import java.time.Instant
 
 data class ShortUrlResponse(
     val url: String,
@@ -35,8 +37,10 @@ class LinkController(
     )
     fun create(
         @RequestParam url: String,
+        @RequestParam(required = false) @Future expirationTime: Instant?,
+        // se utiliza @Future para asegurarse de que la fecha de expiracion sea posterior al momento de añadir a la BD
     ): ResponseEntity<ShortUrlResponse> {
-        val created = createShortUrl.create(url)
+        val created = createShortUrl.create(url, expirationTime)
         val location =
             ServletUriComponentsBuilder
                 .fromCurrentContextPath()
@@ -69,5 +73,4 @@ class LinkController(
     @ExceptionHandler(UrlExpiredException::class)
     fun expiredUrl(ex: UrlExpiredException): ResponseEntity<Map<String, String>> =
         ResponseEntity.status(HttpStatus.GONE).body(mapOf("error" to (ex.message ?: "expired url")))
-
 }

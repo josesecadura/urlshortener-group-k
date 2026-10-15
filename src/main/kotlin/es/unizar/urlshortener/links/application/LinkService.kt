@@ -2,6 +2,7 @@ package es.unizar.urlshortener.links.application
 
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.UrlExpirationEvent
 import es.unizar.urlshortener.links.domain.ShortUrl
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -15,15 +16,19 @@ class LinkService(
     private val codes: ShortCodeSource,
     private val events: ApplicationEventPublisher,
 ) : CreateShortUrl,
-    RedirectShortUrl {
+    RedirectShortUrl,
+    ExpiredURL {
     @Transactional
-    override fun create(url: String): CreatedShortUrl {
+    override fun create(
+        url: String,
+        expirationTime: Instant?,
+    ): CreatedShortUrl {
         val trimmed = url.trim()
         require(trimmed.isNotEmpty()) { "url must not be blank" }
         if (!validator.isValid(trimmed)) {
             throw InvalidUrlException(trimmed)
         }
-        val stored = store.insert(ShortUrl(hash = codes.next(), target = trimmed))
+        val stored = store.insert(ShortUrl(hash = codes.next(), target = trimmed, expirationTime = expirationTime))
         events.publishEvent(ShortUrlCreatedEvent(hash = stored.hash, target = stored.target))
         return CreatedShortUrl(hash = stored.hash, target = stored.target)
     }
@@ -31,12 +36,23 @@ class LinkService(
     @Transactional
     override fun redirect(hash: String): Redirection {
         val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
-        if(shortUrl.expirationTime!=null &&  Instant.now().isBefore(shortUrl.expirationTime)) {
-            //url caducada, se elimina de BD
+        if (shortUrl.expirationTime != null && Instant.now().isBefore(shortUrl.expirationTime)) {
+            // url caducada, se elimina de BD. Publico evento para avisar de que lo he borrado
+            events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = Instant.now()))
             store.delete(hash)
             throw UrlExpiredException(hash)
         }
         events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
         return Redirection(target = shortUrl.target)
+    }
+
+    @Transactional
+    override fun deleteExpiredURL(now: Instant): Int {
+        val listDelete = store.getExpiredURLPeriodic(now)
+        for (h in listDelete) {
+            // se publica el evento para cada URL que ha caducado
+            events.publishEvent(UrlExpirationEvent(hash = h, expirationTime = now))
+        }
+        return store.deleteExpiredURLPeriodic(Instant.now())
     }
 }

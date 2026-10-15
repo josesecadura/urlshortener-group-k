@@ -9,7 +9,7 @@ interface JpaLinkStatsRepository : JpaRepository<LinkStatsEntity, String> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """
-        insert into LinkStatsEntity (hash, totalClicks, expiration) values (:hash, 1, :expiration)
+        insert into LinkStatsEntity (hash, totalClicks) values (:hash, 1)
         on conflict (hash) do update set totalClicks = totalClicks + 1
         """,
     )
@@ -20,7 +20,7 @@ interface JpaLinkStatsRepository : JpaRepository<LinkStatsEntity, String> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """
-        insert into LinkStatsEntity (hash, totalClicks, expiration) values (:hash, 0, :expiration)
+        insert into LinkStatsEntity (hash, totalClicks) values (:hash, 0)
         on conflict (hash) do update set totalClicks = totalClicks
         """,
     )
