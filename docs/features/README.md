@@ -36,8 +36,8 @@ Personal names and ownership belong in your local `TEAM.md` (git-ignored), not i
 | --- | --- | --- | --- | --- | --- |
 | [0004](0004-async-click-ingestion.md) | Async Click Ingestion via Outbox → Broker | `clicks` | 21 | Y | — |
 | [0005](0005-browser-and-platform-detection.md) | Browser and Platform Detection | `analytics` | 8 | Y | — |
-| [0006](0006-redirect-cache-with-cross-replica-invalidation.md) | Redirect Cache with Cross-Replica Invalidation | `links` | 21 | Y | — |
-| [0007](0007-qr-code-generation.md) | QR Code Generation | `links` | 8 | N | — |
+| [0006](0006-redirect-cache-with-cross-replica.md) | Redirect Cache with Cross-Replica Invalidation | `links` | 21 | Y | — |
+| [0007](0007-qr-code-generator.md) | QR Code Generation | `links` | 8 | N | — |
 | [0008](0008-url-management.md) | URL Management (Deactivation) | `links` | 13 | N | — |
 | [0009](0009-url-expiration.md) | URL Expiration | `links` | 13 | N | — |
 
