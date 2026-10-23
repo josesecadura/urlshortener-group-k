@@ -36,6 +36,7 @@ class LinkService(
         return CreatedShortUrl(hash = stored.hash, target = stored.target)
     }
 
+    // Separamos esta creacion para no cambiar el comportamiento del endpoint original
     @Transactional
     override fun createManaged(url: String): ManagedShortUrlCreated {
         val trimmed = url.trim()
@@ -43,6 +44,7 @@ class LinkService(
         if (!validator.isValid(trimmed)) {
             throw InvalidUrlException(trimmed)
         }
+        // Devolvemos la clave al usuario, pero solo guardamos su hash en la BD
         val key = ManagementKeys.issue()
         val stored =
             store.insert(
@@ -70,10 +72,12 @@ class LinkService(
         if (expectedDigest == null || !ManagementKeys.matches(expectedDigest, managementKey)) {
             throw InvalidManagementKeyException()
         }
+        // Si ya se desactivo, no hay que volver a modificarla
         if (existing.deactivatedAt != null) return
 
         val deactivatedAt = Instant.now()
         val updated = store.deactivate(hash, expectedDigest, deactivatedAt)
+        // Solo avisamos a otros modulos si la URL se ha desactivado
         if (updated == 1) {
             events.publishEvent(ShortUrlDeactivatedEvent(hash = hash, deactivatedAt = deactivatedAt))
         }
@@ -82,6 +86,7 @@ class LinkService(
     @Transactional
     override fun redirect(hash: String): Redirection {
         val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
+        // Una URL desactivada ya no debe redirigir al destino
         if (shortUrl.deactivatedAt != null) {
             throw UrlDeactivatedException(hash)
         }

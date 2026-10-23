@@ -16,16 +16,15 @@ internal object ManagementKeys {
     private val random = SecureRandom()
 
     fun issue(): IssuedManagementKey {
+        // Generamos una clave aleatoria diferente para cada URL administrable
         val bytes = ByteArray(32)
         random.nextBytes(bytes)
         val plaintext = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         return IssuedManagementKey(plaintext = plaintext, sha256 = digest(plaintext))
     }
 
-    fun matches(
-        storedDigest: String,
-        candidateKey: String,
-    ): Boolean {
+    fun matches( storedDigest: String, candidateKey: String): Boolean {
+        // Comparamos los hashes para no necesitar guardar la clave original
         val candidateDigest = digest(candidateKey)
         return MessageDigest.isEqual(
             storedDigest.toByteArray(StandardCharsets.US_ASCII),

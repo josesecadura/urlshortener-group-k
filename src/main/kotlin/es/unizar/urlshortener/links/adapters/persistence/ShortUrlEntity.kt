@@ -14,6 +14,7 @@ class ShortUrlEntity(
     var target: String,
     var createdAt: Instant = Instant.now(),
     var expirationTime: Instant? = null, // almacena el instante de caducidad si existe, si no caduca -> null
+    // Guardamos el hash de la clave y la fecha de desactivacion, sin borrar la URL
     var managementKeyHash: String? = null,
     var deactivatedAt: Instant? = null,
 )

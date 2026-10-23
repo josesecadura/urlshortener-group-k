@@ -72,6 +72,7 @@ class LinkController(
     fun notFound(ex: LinkNotFoundException): ResponseEntity<Map<String, String>> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to (ex.message ?: "not found")))
 
+    // Respondemos con 410 para diferenciar una URL desactivada de una inexistente
     @ExceptionHandler(UrlDeactivatedException::class)
     fun deactivated(ex: UrlDeactivatedException): ResponseEntity<ProblemDetail> {
         val problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.message ?: "Link deactivated")

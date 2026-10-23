@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param
 import java.time.Instant
 
 interface JpaShortUrlRepository : JpaRepository<ShortUrlEntity, String> {
+    // Esta consulta evita que dos peticiones desactiven la misma URL
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """

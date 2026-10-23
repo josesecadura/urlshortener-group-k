@@ -46,6 +46,7 @@ class ManagedLinkController(
                 .path("/{hash}")
                 .buildAndExpand(created.hash)
                 .toUri()
+        // Evitamos guardar en cache una respuesta que contiene la clave
         return ResponseEntity
             .created(location)
             .header(HttpHeaders.CACHE_CONTROL, "no-store")
@@ -58,6 +59,7 @@ class ManagedLinkController(
             )
     }
 
+    // La clave de gestion se recibe en la cabecera Authorization
     @DeleteMapping("/api/managed-links/{hash}")
     fun deactivate(
         @PathVariable hash: String,
