@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap
 // Cache en memoria local ahora mismo luego se hará con redis
 @Component
 class InMemoryRedirectCache : RedirectCache {
-
     // Almacenamos las URLs con ese hash
     private val entries = ConcurrentHashMap<String, ShortUrl>()
 

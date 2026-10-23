@@ -44,3 +44,6 @@ README_files
 
 ### Team PII (never commit) ###
 TEAM.md
+
+### Claude local context ###
+CLAUDE.md
