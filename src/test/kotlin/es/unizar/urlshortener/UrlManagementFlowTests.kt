@@ -39,7 +39,7 @@ class UrlManagementFlowTests {
             .andExpect(status().isGone)
             .andExpect(jsonPath("$.status").value(410))
 
-        // Repetir la desactivacion no debe dar error.
+        // Repetir la desactivacion no debe dar error
         mockMvc
             .perform(delete("/api/managed-links/$hash").header("Authorization", "Bearer $key"))
             .andExpect(status().isNoContent)
@@ -108,6 +108,7 @@ class UrlManagementFlowTests {
         assertNotEquals(first.second, second.second)
     }
 
+    // Usamos una URL nueva por llamada para no compartir estado entre pruebas
     private fun createManagedLink(): Pair<String, String> {
         val result =
             mockMvc
