@@ -34,6 +34,13 @@ data class CreatedShortUrl(
     val target: String,
 )
 
+/** The plaintext management key is returned only at creation time. */
+data class ManagedShortUrlCreated(
+    val hash: String,
+    val target: String,
+    val managementKey: String,
+)
+
 data class Redirection(
     val target: String,
 )
@@ -60,6 +67,11 @@ fun interface CreateShortUrl {
     // Para crear URL sin fecha de caducidad, al create de arriba no puedo poner expirationTime: Instant?=Null
     // para valor por defecto al ser un metodo abstracto
     fun create(url: String) = create(url, null)
+}
+
+@PrimaryPort
+fun interface CreateManagedShortUrl {
+    fun createManaged(url: String): ManagedShortUrlCreated
 }
 
 @PrimaryPort

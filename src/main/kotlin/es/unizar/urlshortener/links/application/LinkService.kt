@@ -16,6 +16,7 @@ class LinkService(
     private val codes: ShortCodeSource,
     private val events: ApplicationEventPublisher,
 ) : CreateShortUrl,
+    CreateManagedShortUrl,
     RedirectShortUrl,
     ExpiredURL {
     @Transactional
@@ -31,6 +32,30 @@ class LinkService(
         val stored = store.insert(ShortUrl(hash = codes.next(), target = trimmed, expirationTime = expirationTime))
         events.publishEvent(ShortUrlCreatedEvent(hash = stored.hash, target = stored.target))
         return CreatedShortUrl(hash = stored.hash, target = stored.target)
+    }
+
+    @Transactional
+    override fun createManaged(url: String): ManagedShortUrlCreated {
+        val trimmed = url.trim()
+        require(trimmed.isNotEmpty()) { "url must not be blank" }
+        if (!validator.isValid(trimmed)) {
+            throw InvalidUrlException(trimmed)
+        }
+        val key = ManagementKeys.issue()
+        val stored =
+            store.insert(
+                ShortUrl(
+                    hash = codes.next(),
+                    target = trimmed,
+                    managementKeyHash = key.sha256,
+                ),
+            )
+        events.publishEvent(ShortUrlCreatedEvent(hash = stored.hash, target = stored.target))
+        return ManagedShortUrlCreated(
+            hash = stored.hash,
+            target = stored.target,
+            managementKey = key.plaintext,
+        )
     }
 
     @Transactional

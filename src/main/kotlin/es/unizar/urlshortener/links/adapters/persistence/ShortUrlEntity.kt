@@ -14,6 +14,8 @@ class ShortUrlEntity(
     var target: String,
     var createdAt: Instant = Instant.now(),
     var expirationTime: Instant? = null, // almacena el instante de caducidad si existe, si no caduca -> null
+    var managementKeyHash: String? = null,
+    var deactivatedAt: Instant? = null,
 )
 
 fun ShortUrl.toEntity() =
@@ -22,6 +24,8 @@ fun ShortUrl.toEntity() =
         target = target,
         createdAt = createdAt,
         expirationTime = expirationTime,
+        managementKeyHash = managementKeyHash,
+        deactivatedAt = deactivatedAt,
     )
 
 fun ShortUrlEntity.toDomain() =
@@ -30,4 +34,6 @@ fun ShortUrlEntity.toDomain() =
         target = target,
         createdAt = createdAt,
         expirationTime = expirationTime,
+        managementKeyHash = managementKeyHash,
+        deactivatedAt = deactivatedAt,
     )
