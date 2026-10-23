@@ -4,11 +4,13 @@ import es.unizar.urlshortener.links.application.CreateShortUrl
 import es.unizar.urlshortener.links.application.InvalidUrlException
 import es.unizar.urlshortener.links.application.LinkNotFoundException
 import es.unizar.urlshortener.links.application.RedirectShortUrl
+import es.unizar.urlshortener.links.application.UrlDeactivatedException
 import es.unizar.urlshortener.links.application.UrlExpiredException
 import jakarta.validation.constraints.Future
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
@@ -69,6 +71,15 @@ class LinkController(
     @ExceptionHandler(LinkNotFoundException::class)
     fun notFound(ex: LinkNotFoundException): ResponseEntity<Map<String, String>> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to (ex.message ?: "not found")))
+
+    @ExceptionHandler(UrlDeactivatedException::class)
+    fun deactivated(ex: UrlDeactivatedException): ResponseEntity<ProblemDetail> {
+        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.message ?: "Link deactivated")
+        problem.title = "Gone"
+        problem.type = URI.create("about:blank")
+        problem.instance = ServletUriComponentsBuilder.fromCurrentRequestUri().build().toUri()
+        return ResponseEntity.status(HttpStatus.GONE).body(problem)
+    }
 
     @ExceptionHandler(UrlExpiredException::class)
     fun expiredUrl(ex: UrlExpiredException): ResponseEntity<Map<String, String>> =

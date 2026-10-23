@@ -7,6 +7,22 @@ import org.springframework.data.repository.query.Param
 import java.time.Instant
 
 interface JpaShortUrlRepository : JpaRepository<ShortUrlEntity, String> {
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        update ShortUrlEntity s
+           set s.deactivatedAt = :deactivatedAt
+         where s.hash = :hash
+           and s.managementKeyHash = :managementKeyHash
+           and s.deactivatedAt is null
+        """,
+    )
+    fun deactivate(
+        @Param("hash") hash: String,
+        @Param("managementKeyHash") managementKeyHash: String,
+        @Param("deactivatedAt") deactivatedAt: Instant,
+    ): Int
+
     @Modifying
     @Query("DELETE FROM ShortUrlEntity s WHERE s.expirationTime < :now")
     fun deleteExpiredURL(

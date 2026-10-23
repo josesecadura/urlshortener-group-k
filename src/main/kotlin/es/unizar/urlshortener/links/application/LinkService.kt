@@ -2,6 +2,7 @@ package es.unizar.urlshortener.links.application
 
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
 import es.unizar.urlshortener.links.UrlExpirationEvent
 import es.unizar.urlshortener.links.domain.ShortUrl
 import org.springframework.context.ApplicationEventPublisher
@@ -17,6 +18,7 @@ class LinkService(
     private val events: ApplicationEventPublisher,
 ) : CreateShortUrl,
     CreateManagedShortUrl,
+    DeactivateManagedShortUrl,
     RedirectShortUrl,
     ExpiredURL {
     @Transactional
@@ -59,8 +61,30 @@ class LinkService(
     }
 
     @Transactional
+    override fun deactivate(
+        hash: String,
+        managementKey: String,
+    ) {
+        val existing = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
+        val expectedDigest = existing.managementKeyHash
+        if (expectedDigest == null || !ManagementKeys.matches(expectedDigest, managementKey)) {
+            throw InvalidManagementKeyException()
+        }
+        if (existing.deactivatedAt != null) return
+
+        val deactivatedAt = Instant.now()
+        val updated = store.deactivate(hash, expectedDigest, deactivatedAt)
+        if (updated == 1) {
+            events.publishEvent(ShortUrlDeactivatedEvent(hash = hash, deactivatedAt = deactivatedAt))
+        }
+    }
+
+    @Transactional
     override fun redirect(hash: String): Redirection {
         val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
+        if (shortUrl.deactivatedAt != null) {
+            throw UrlDeactivatedException(hash)
+        }
         if (shortUrl.expirationTime != null && Instant.now().isAfter(shortUrl.expirationTime)) {
             // url caducada, se elimina de BD. Publico evento para avisar de que lo he borrado
             events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = Instant.now()))

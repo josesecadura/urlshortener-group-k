@@ -22,6 +22,17 @@ internal object ManagementKeys {
         return IssuedManagementKey(plaintext = plaintext, sha256 = digest(plaintext))
     }
 
+    fun matches(
+        storedDigest: String,
+        candidateKey: String,
+    ): Boolean {
+        val candidateDigest = digest(candidateKey)
+        return MessageDigest.isEqual(
+            storedDigest.toByteArray(StandardCharsets.US_ASCII),
+            candidateDigest.toByteArray(StandardCharsets.US_ASCII),
+        )
+    }
+
     fun digest(plaintext: String): String =
         HexFormat.of().formatHex(
             MessageDigest.getInstance("SHA-256").digest(plaintext.toByteArray(StandardCharsets.UTF_8)),
