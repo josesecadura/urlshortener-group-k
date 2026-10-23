@@ -1,0 +1,12 @@
+.git
+.gradle
+.kotlin
+build
+**/build
+bin
+**/bin
+.idea
+.vscode
+*.patch
+*.iml
+TEAM.md
