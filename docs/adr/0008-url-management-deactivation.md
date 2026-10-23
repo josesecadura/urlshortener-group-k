@@ -1,4 +1,4 @@
-# ADR 0004: URL management with secure deactivation and module events
+# ADR 0008: URL management with secure deactivation and module events
 
 - **Status:** Proposed
 - **Date:** 2026-10-23

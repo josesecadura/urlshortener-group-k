@@ -18,7 +18,7 @@ Allows the creating user to deactivate or delete a shortened URL using a managem
 
 ## Later (after the 2 October agreement)
 
-- **ADR:** none | docs/adr/NNNN-….md *(by when a choice locks a module, the broker, or a library)*
+- **ADR:** [0008-url-management-deactivation](../adr/0008-url-management-deactivation.md)
 
 ### Acceptance criteria
 

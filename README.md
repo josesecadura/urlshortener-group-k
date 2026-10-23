@@ -37,7 +37,7 @@ Day-to-day coding uses `./gradlew bootRun` (in-memory HSQLDB). Demo and grading 
 - ADRs under [`docs/adr/`](docs/adr/README.md) when a choice locks a module, the broker, or a library ([`0000-TEMPLATE.md`](docs/adr/0000-TEMPLATE.md); seed [`0001`](docs/adr/0001-modulith-and-hexagon.md)).
 - Technologies beyond baseline HTTP, in distinct grown features: Call-Return, Event-Based, and Data Flow. Modulith events and the broker count toward architecture, not this slice. Web UI is not graded.
 - Defence packet: filled feature cards, ADR log, and a live Compose demo (create, redirect, stats).
-- Personal names, ownership, and the integration owner are in **`TEAM.md`** (see `TEAM.md.example`). That file is git-ignored and must not be committed, but must be included in the zip.
+- Personal names, ownership, and the integration owner are in **`TEAM.md`** (see `TEAM.md.example`). That file is git-ignored and must not be committed nor included in the zip.
 
 ## Local dev (no Docker)
 
@@ -146,11 +146,6 @@ Full rules: [Group Project](https://moodle.unizar.es/add/course/section.php?id=1
 3. **TEAM.md**: copy `TEAM.md.example` → `TEAM.md`. Personal names, UNIZAR emails, git identity, owned features, and the integration owner. Do not commit it.
 4. **Submit**: upload a zip of the working directory via Moodle by **2 October** (the zip includes `TEAM.md`).
 
-## Proof of Concept
-
-Como arrancar el proyecto y ejecutar los test
-
-
 ## Cómo arrancar y probar (prueba de concepto)
 
 ```bash
@@ -170,6 +165,6 @@ docker compose up --build
 ./gradlew test --tests '*ModularityTests'
 ```
 
-ADR de la PoC: [`docs/adr/0006-redirect-cache-invalidation.md`](docs/adr/0006-redirect-cache-invalidation.md).
+ADR de la PoC: [`0006`](docs/adr/0006-redirect-cache-invalidation.md) (caché de redirección) y [`0008`](docs/adr/0008-url-management-deactivation.md) (gestión de URLs).
 
 Fill `## Later` after the agreement, when a choice locks an ADR. By **23 October** (proof of concept): one grown event end to end, and `docker compose up` starts cleanly. By **27 November** (prototype): one grown feature at Level 3 or higher (weight ≥ 13), its acceptance criteria, and CI green. By the defence (**17–18 December**): qualities self-assessment and AI disclosure.

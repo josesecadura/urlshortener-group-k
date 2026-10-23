@@ -38,7 +38,7 @@ Personal names and ownership belong in your local `TEAM.md` (git-ignored), not i
 | [0005](0005-browser-and-platform-detection.md) | Browser and Platform Detection | `analytics` | 8 | Y | — |
 | [0006](0006-redirect-cache-with-cross-replica.md) | Redirect Cache with Cross-Replica Invalidation | `links` | 21 | Y | [0006](../adr/0006-redirect-cache-invalidation.md) |
 | [0007](0007-qr-code-generator.md) | QR Code Generation | `links` | 8 | N | — |
-| [0008](0008-url-management.md) | URL Management (Deactivation) | `links` | 13 | N | — |
+| [0008](0008-url-management.md) | URL Management (Deactivation) | `links` | 13 | N | [0008](../adr/0008-url-management-deactivation.md) |
 | [0009](0009-url-expiration.md) | URL Expiration | `links` | 13 | N | — |
 
 **Budget used:** 84 / 84 · **Grown:** 6 / ≥4 · **Event-coupled:** 3 / ≥2
