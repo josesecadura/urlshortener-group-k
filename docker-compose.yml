@@ -33,8 +33,15 @@ services:
       retries: 12
       start_period: 40s
 
+  # app2 espera a app1: si ambas réplicas crean el esquema a la vez sobre una BD vacía,
+  # Postgres falla con "duplicate key ... pg_type_typname_nsp_index" (event_publication).
   app2:
     <<: *app
+    depends_on:
+      db:
+        condition: service_healthy
+      app1:
+        condition: service_healthy
 
   lb:
     image: nginx:1.27-alpine

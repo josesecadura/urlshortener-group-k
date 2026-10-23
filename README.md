@@ -146,4 +146,30 @@ Full rules: [Group Project](https://moodle.unizar.es/add/course/section.php?id=1
 3. **TEAM.md**: copy `TEAM.md.example` → `TEAM.md`. Personal names, UNIZAR emails, git identity, owned features, and the integration owner. Do not commit it.
 4. **Submit**: upload a zip of the working directory via Moodle by **2 October** (the zip includes `TEAM.md`).
 
+## Proof of Concept
+
+Como arrancar el proyecto y ejecutar los test
+
+
+## Cómo arrancar y probar (prueba de concepto)
+
+```bash
+# Arrancar el producto (Postgres + app1 + app2 + nginx) -> http://localhost:8080
+docker compose up --build
+
+# Desarrollo local sin Docker (HSQLDB en memoria; parar antes de usar Compose, mismo puerto)
+./gradlew bootRun
+
+# Todos los tests
+./gradlew test
+
+# PoC ficha 0006 (evento ShortUrlUpdatedEvent invalida la caché de redirección)
+./gradlew test --tests '*RedirectCacheTests'
+
+# Arquitectura (Modulith + hexágono)
+./gradlew test --tests '*ModularityTests'
+```
+
+ADR de la PoC: [`docs/adr/0006-redirect-cache-invalidation.md`](docs/adr/0006-redirect-cache-invalidation.md).
+
 Fill `## Later` after the agreement, when a choice locks an ADR. By **23 October** (proof of concept): one grown event end to end, and `docker compose up` starts cleanly. By **27 November** (prototype): one grown feature at Level 3 or higher (weight ≥ 13), its acceptance criteria, and CI green. By the defence (**17–18 December**): qualities self-assessment and AI disclosure.
