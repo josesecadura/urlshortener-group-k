@@ -3,6 +3,7 @@ package es.unizar.urlshortener.links.application
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
 import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
+import es.unizar.urlshortener.links.ShortUrlUpdatedEvent
 import es.unizar.urlshortener.links.UrlExpirationEvent
 import es.unizar.urlshortener.links.domain.ShortUrl
 import org.springframework.context.ApplicationEventPublisher
@@ -15,6 +16,7 @@ class LinkService(
     private val store: ShortUrlStore,
     private val validator: UrlValidator,
     private val codes: ShortCodeSource,
+    private val cache: RedirectCache,
     private val events: ApplicationEventPublisher,
 ) : CreateShortUrl,
     CreateManagedShortUrl,
@@ -80,20 +82,27 @@ class LinkService(
         // Solo avisamos a otros modulos si la URL se ha desactivado
         if (updated == 1) {
             events.publishEvent(ShortUrlDeactivatedEvent(hash = hash, deactivatedAt = deactivatedAt))
+            events.publishEvent(ShortUrlUpdatedEvent(hash = hash))
         }
     }
 
     @Transactional
     override fun redirect(hash: String): Redirection {
-        val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
-        // Una URL desactivada ya no debe redirigir al destino
+        // 1) caché; 2) si falla, BD y se guarda en caché para la próxima
+        val shortUrl =
+            cache.get(hash)
+                ?: store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }.also { cache.put(it) }
+        // Una URL desactivada ya no debe redirigir
         if (shortUrl.deactivatedAt != null) {
             throw UrlDeactivatedException(hash)
         }
+
         if (shortUrl.expirationTime != null && Instant.now().isAfter(shortUrl.expirationTime)) {
             // url caducada, se elimina de BD. Publico evento para avisar de que lo he borrado
             events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = Instant.now()))
             store.delete(hash)
+            // la URL ya no existe: avisa para invalidar la caché
+            events.publishEvent(ShortUrlUpdatedEvent(hash = hash))
             throw UrlExpiredException(hash)
         }
         events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
@@ -106,6 +115,7 @@ class LinkService(
         for (h in listDelete) {
             // se publica el evento para cada URL que ha caducado
             events.publishEvent(UrlExpirationEvent(hash = h, expirationTime = now))
+            events.publishEvent(ShortUrlUpdatedEvent(hash = h))
         }
         return store.deleteExpiredURLPeriodic(Instant.now())
     }

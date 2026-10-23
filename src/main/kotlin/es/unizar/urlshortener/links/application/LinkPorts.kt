@@ -27,6 +27,18 @@ interface ShortUrlStore {
 }
 
 @SecondaryPort
+interface RedirectCache {
+    // Busca url corta en cache usando el hash
+    fun get(hash: String): ShortUrl?
+
+    // Guarda url corta en cache usando el hash
+    fun put(shortUrl: ShortUrl)
+
+    // Elimina url corta de cache usando el hash
+    fun evict(hash: String)
+}
+
+@SecondaryPort
 fun interface UrlValidator {
     fun isValid(url: String): Boolean
 }

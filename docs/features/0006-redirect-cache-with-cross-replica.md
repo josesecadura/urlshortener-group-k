@@ -18,7 +18,7 @@ Caches hash → target in a shared store. When a URL is deactivated or deleted, 
 
 ## Later (after the 2 October agreement)
 
-- **ADR:** none | docs/adr/NNNN-….md *(by when a choice locks a module, the broker, or a library)*
+- **ADR:** [0006-redirect-cache-invalidation](../adr/0006-redirect-cache-invalidation.md)
 
 ### Acceptance criteria
 
