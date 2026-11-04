@@ -45,3 +45,5 @@ jmolecules-archunit = { module = "org.jmolecules.integrations:jmolecules-archuni
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.ref = "shedlock" }
 shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
+spring-rabbit-test={module="org.springframework.amqp:spring-rabbit-test"}
+spring-boot-starter-amqp={module="org.springframework.boot:spring-boot-starter-amqp"}

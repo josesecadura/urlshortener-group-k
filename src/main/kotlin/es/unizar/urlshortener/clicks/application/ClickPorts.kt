@@ -1,6 +1,7 @@
 package es.unizar.urlshortener.clicks.application
 
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
+import es.unizar.urlshortener.clicks.ClickLoggedIngestionEvent
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import java.time.Instant
@@ -22,4 +23,9 @@ interface ClickStore {
 @PrimaryPort
 fun interface RecordClick {
     fun record(event: ClickLoggedEvent)
+}
+
+@PrimaryPort
+fun interface RecordClickIngestion {
+    fun recordIngestion(event: ClickLoggedIngestionEvent)
 }
