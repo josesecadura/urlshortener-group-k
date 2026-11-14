@@ -39,6 +39,7 @@ archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-rabbitmq = { module = "org.testcontainers:testcontainers-rabbitmq" }
 jmolecules-bom = { module = "org.jmolecules:jmolecules-bom", version.ref = "jmolecules" }
 jmolecules-hexagonal = { module = "org.jmolecules:jmolecules-hexagonal-architecture" }
 jmolecules-archunit = { module = "org.jmolecules.integrations:jmolecules-archunit" }

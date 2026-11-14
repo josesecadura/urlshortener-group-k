@@ -59,6 +59,7 @@ dependencies {
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.rabbitmq)
     testImplementation(libs.jmolecules.archunit)
     testImplementation(libs.spring.rabbit.test)
 }
