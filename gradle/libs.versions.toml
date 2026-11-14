@@ -48,3 +48,5 @@ shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.
 shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
 spring-rabbit-test={module="org.springframework.amqp:spring-rabbit-test"}
 spring-boot-starter-amqp={module="org.springframework.boot:spring-boot-starter-amqp"}
+spring-boot-rest-client={module="org.springframework.boot:spring-boot-restclient"}
+spring-boot-rest-test-client={module="org.springframework.boot:spring-boot-resttestclient"}

@@ -1,12 +1,16 @@
 package es.unizar.urlshortener.clicks.adapters.messageBroker
 
+import org.springframework.amqp.support.converter.MessageConverter
 import org.springframework.amqp.core.Binding
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.Queue
 import org.springframework.amqp.core.TopicExchange
+import org.springframework.amqp.support.converter.JacksonJavaTypeMapper
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import tools.jackson.databind.json.JsonMapper
 
 @Profile("broker")
 @Configuration
@@ -37,4 +41,12 @@ class BrokerConfiguration {
 
         return BindingBuilder.bind(queue).to(exchange).with("#")
     }
+    // conversor para que los mensajes que se envian al broker se envien y reciban como json, sino da error
+    @Bean
+    fun jsonMessageConverter(mapper: JsonMapper): MessageConverter =
+        JacksonJsonMessageConverter(mapper).apply {
+            typePrecedence = JacksonJavaTypeMapper.TypePrecedence.INFERRED
+        }
+
+
 }

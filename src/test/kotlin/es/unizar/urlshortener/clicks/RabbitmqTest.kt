@@ -17,12 +17,16 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
-import org.springframework.http.HttpRequest
+import java.net.http.HttpRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.testcontainers.rabbitmq.RabbitMQContainer
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpResponse
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 @Testcontainers(disabledWithoutDocker = true)
 @Import(RabbitMqContainer::class)
@@ -44,6 +48,7 @@ class RabbitmqTest{
     private lateinit var client: TestRestTemplate
 
 
+
     @Test
     fun `broker down returns 307`() {
         // 307 es el codigo que devuelve http tras hacer una llamada a redirect con una url, como que la redireccion es correcta
@@ -53,19 +58,19 @@ class RabbitmqTest{
 
         val url = "https://example.com/${UUID.randomUUID()}"
         val hash = createShortUrl.create(url).hash
+        //se crea el cliente http indicando que no se van a realizar redirecciones, para que devuelve 307
+        val clienthttp=HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build()
 
-        val headers = HttpHeaders()
-        headers.accept = listOf(MediaType.TEXT_HTML)
-        val response =
-            client.exchange(
-                "http://127.0.0.1:$port/$hash",
-                HttpMethod.GET,
-                HttpEntity<Void>(headers),
-                Void::class.java,
-            )
+        val response=clienthttp.send(HttpRequest.newBuilder(URI("http://127.0.0.1:$port/$hash")).GET().build(), HttpResponse.BodyHandlers.discarding())
 
         //se comprueba que con el broker en stop (simila broker caido), se sigue recibiendo 307 (redireccion)
-        assertEquals(307, response.statusCode.value())
+        //print("Resuesta: "+response.statusCode())
+        assertEquals(307, response.statusCode())
+
+        //se comprueba que devuelve la misma URL que hemos creado
+        assertEquals(url, response.headers().firstValue("Location").getOrNull())
+
+        eventsRabbit.start()
 
 
 

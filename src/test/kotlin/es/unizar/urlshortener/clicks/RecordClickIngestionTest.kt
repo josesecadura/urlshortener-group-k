@@ -12,6 +12,7 @@ import org.springframework.amqp.core.Queue
 import org.springframework.amqp.core.TopicExchange
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.ApplicationEventPublisher
@@ -24,9 +25,31 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.util.UUID
 
+
+@TestConfiguration
+class RecorsClickIngestionConfigurationTest {
+    private var colaNameTest: String = "clicks.ingest.queueTest"
+    private var topicExchangeName: String = "clicks.ingest"
+
+    @Bean
+    fun queueTest(): Queue {
+        return Queue(colaNameTest, true) // durable=true para que si se se reinicia, se mantenga la cola
+    }
+
+    @Bean
+    fun binding_test(
+        queueTest: Queue,
+        topicExchangeName: TopicExchange,
+    ): Binding {
+
+        return BindingBuilder.bind(queueTest).to(topicExchangeName).with("#")
+    }
+
+}
+
 @ActiveProfiles("broker")
 @Testcontainers(disabledWithoutDocker = true)
-@Import(RabbitMqContainer::class)
+@Import(RabbitMqContainer::class, RecorsClickIngestionConfigurationTest::class)
 @SpringBootTest
 class RecordClickIngestionTest {
     @Autowired
@@ -86,24 +109,5 @@ class RecordClickIngestionTest {
         const val REDELIVERIES = 3
     }
 }
-/*
-@TestConfiguration
-class RecorsClickIngestionConfigurationTest {
-    private var colaName: String = "clicks.ingest.queueTest"
-    private var topicExchangeName: String = "clicks.ingest"
 
-    @Bean
-    fun queue_test(): Queue {
-        return Queue(colaName, true) // durable=true para que si se se reinicia, se mantenga la cola
-    }
 
-    @Bean
-    fun binding_test(
-        queue: Queue,
-        exchange: TopicExchange,
-    ): Binding {
-
-        return BindingBuilder.bind(queue).to(exchange).with("#")
-    }
-
-}*/
