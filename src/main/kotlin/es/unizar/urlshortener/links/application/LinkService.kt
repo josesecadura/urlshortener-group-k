@@ -22,7 +22,8 @@ class LinkService(
     @Transactional
     override fun create(
         url: String,
-        @Future expirationTime: Instant?,   // se indica con Future para que solo se admita si la fecha es futura, si se introduce una fecha antigua devuelve 400 Bad Request
+        @Future expirationTime: Instant?,
+        // se indica con Future para que solo se admita si la fecha es futura, si se introduce una fecha antigua devuelve 400 Bad Request
     ): CreatedShortUrl {
         val trimmed = url.trim()
         require(trimmed.isNotEmpty()) { "url must not be blank" }
@@ -33,7 +34,9 @@ class LinkService(
         events.publishEvent(ShortUrlCreatedEvent(hash = stored.hash, target = stored.target))
         return CreatedShortUrl(hash = stored.hash, target = stored.target)
     }
-    //en transactional: Si se lanza excepcion, no se hace commit de la BD. En caso de que la excepcion sea UrlExpiredException queremos que se haga commit para eliminar la url caducada -> norollbackfor
+
+    // en transactional: Si se lanza excepcion, no se hace commit de la BD.
+    // En caso de que la excepcion sea UrlExpiredException queremos que se haga commit para eliminar la url caducada -> norollbackfor
     @Transactional(noRollbackForClassName = ["UrlExpiredException"])
     override fun redirect(hash: String): Redirection {
         val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
