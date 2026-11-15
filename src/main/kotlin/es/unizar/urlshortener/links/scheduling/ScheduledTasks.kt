@@ -4,6 +4,7 @@ import net.javacrumbs.shedlock.core.LockAssert
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 
 @Component
@@ -15,6 +16,7 @@ class ScheduledTasks(
     // En caso de que el nodo se bloquee/muera, maximo tiempo espera 5 minutos
     @Scheduled(fixedRate = 60000 * 5) // se ejecuta cada 60s=1min * 5 =5 min
     @SchedulerLock(name = "deleteExpiredURL", lockAtLeastFor = "PT1M", lockAtMostFor = "PT5M")
+    @Transactional
     fun periodicDeleteExpiratedURL() {
         LockAssert.assertLocked()
         expiredURL.deleteExpiredURL(Instant.now())

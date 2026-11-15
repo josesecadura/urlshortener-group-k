@@ -4,6 +4,7 @@ import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
 import es.unizar.urlshortener.links.UrlExpirationEvent
 import es.unizar.urlshortener.links.domain.ShortUrl
+import jakarta.validation.constraints.Future
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,7 +22,7 @@ class LinkService(
     @Transactional
     override fun create(
         url: String,
-        expirationTime: Instant?,
+        @Future expirationTime: Instant?,   // se indica con Future para que solo se admita si la fecha es futura, si se introduce una fecha antigua devuelve 400 Bad Request
     ): CreatedShortUrl {
         val trimmed = url.trim()
         require(trimmed.isNotEmpty()) { "url must not be blank" }
@@ -32,13 +33,13 @@ class LinkService(
         events.publishEvent(ShortUrlCreatedEvent(hash = stored.hash, target = stored.target))
         return CreatedShortUrl(hash = stored.hash, target = stored.target)
     }
-
-    @Transactional
+    //en transactional: Si se lanza excepcion, no se hace commit de la BD. En caso de que la excepcion sea UrlExpiredException queremos que se haga commit para eliminar la url caducada -> norollbackfor
+    @Transactional(noRollbackForClassName = ["UrlExpiredException"])
     override fun redirect(hash: String): Redirection {
         val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
         if (shortUrl.expirationTime != null && Instant.now().isAfter(shortUrl.expirationTime)) {
             // url caducada, se elimina de BD. Publico evento para avisar de que lo he borrado
-            events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = Instant.now()))
+            events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = shortUrl.expirationTime))
             store.delete(hash)
             throw UrlExpiredException(hash)
         }
