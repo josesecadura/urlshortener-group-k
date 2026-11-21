@@ -22,8 +22,15 @@ Parses the `User-Agent` header on each redirect to identify browser family and o
 
 ### Acceptance criteria
 
-- [ ] …
-- [ ] …
+- [ ] Al hacer `GET /{hash}` de una URL activa con un `User-Agent` de Chrome en Windows, se devuelve `307` con `Location` igual a la URL original y se registra un clic con navegador `Chrome` y plataforma `Windows`
+- [ ] Al hacer dos redirecciones con Chrome en Windows y otra con Firefox en Linux para el mismo `hash`, `GET /api/stats/{hash}/clients` devuelve `200` con `browsers.Chrome = 2`, `browsers.Firefox = 1`, `platforms.Windows = 2` y `platforms.Linux = 1` una vez procesados los eventos
+- [ ] Al hacer `GET /{hash}` sin cabecera `User-Agent`, se mantiene la redirección `307` y el clic se contabiliza como `Unknown` tanto en navegador como en plataforma
+- [ ] Al hacer `GET /{hash}` con un `User-Agent` no reconocible, se mantiene la redirección `307` y el clic se contabiliza como `Unknown` sin devolver un error de servidor
+- [ ] `GET /api/stats/{hash}/clients` de una URL existente sin clics devuelve `200` con los objetos `browsers` y `platforms` vacíos
+- [ ] `GET /api/stats/{hash}/clients` de un `hash` inexistente devuelve `404` y no crea estadísticas para ese identificador
+- [ ] `GET /{hash}` de una URL inexistente devuelve `404` y no añade ningún clic a las estadísticas de navegadores o plataformas
+- [ ] Si se procesa dos veces un mismo `ClickLoggedEvent` con el mismo `eventId`, las estadísticas por navegador y plataforma solo aumentan una vez
+- [ ] El valor completo del `User-Agent` no se guarda en la base de datos; solo se almacenan los datos necesarios para las estadísticas agregadas
 
 ### Scale evidence
 

@@ -22,8 +22,18 @@ Allows the creating user to deactivate or delete a shortened URL using a managem
 
 ### Acceptance criteria
 
-- [ ] …
-- [ ] …
+- [ ] `POST /api/managed-links` con `url=https://example.com` devuelve `201`, incluye `Location` con la URL corta y el JSON contiene `hash`, `url` y una `managementKey` no vacía; además incluye `Cache-Control: no-store`
+- [ ] `POST /api/managed-links` con una URL no válida (`no-es-una-url`), vacía o formada solo por espacios devuelve `400` y no crea ninguna URL corta
+- [ ] Al crear dos URLs administrables, cada una recibe una `managementKey` distinta y en la base de datos se guarda su hash SHA-256, nunca la clave original
+- [ ] Antes de desactivar una URL administrable, `GET /{hash}` devuelve `307` con `Location` igual a la URL original
+- [ ] `DELETE /api/managed-links/{hash}` con `Authorization: Bearer {managementKey}` correcta devuelve `204`; a partir de ese momento `GET /{hash}` devuelve `410` y no redirige al destino
+- [ ] `DELETE /api/managed-links/{hash}` sin `Authorization`, con `Bearer` vacío o sin el formato `Bearer` devuelve `403` y la URL sigue activa
+- [ ] `DELETE /api/managed-links/{hash}` con una clave incorrecta o con la clave de otra URL devuelve `403` y la URL no se desactiva
+- [ ] `DELETE /api/managed-links/{hash}` con un `hash` inexistente y una cabecera `Authorization: Bearer ...` válida en formato devuelve `404`
+- [ ] Al repetir la desactivación de una URL con su clave correcta, ambas peticiones devuelven `204` y solo se publica un `ShortUrlDeactivatedEvent`
+- [ ] Una URL creada con `POST /api/link` sin clave de gestión no se puede desactivar mediante `DELETE /api/managed-links/{hash}`; devuelve `403` y sigue redirigiendo
+- [ ] Tras una desactivación correcta, el módulo `analytics` recibe `ShortUrlDeactivatedEvent` y refleja el estado desactivado de la URL en sus datos; una petición rechazada con `403` no produce ese cambio
+- [ ] Si una URL estaba almacenada en caché en las dos réplicas, después de desactivarla ninguna réplica debe seguir devolviendo `307`; ambas deben responder `410`
 
 ### Scale evidence
 
