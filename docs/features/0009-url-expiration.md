@@ -22,8 +22,13 @@ Users optionally set an expiration date/time at creation. Accesses after expiry 
 
 ### Acceptance criteria
 
-- [ ] …
-- [ ] …
+- [ ] POST /api/link con una fecha de caducidad antigua responde 400 (BadRequest error)
+- [ ] POST /api/link con una fecha de caducidad posterior a la fecha actual responde 201, incluye la cabecera Location y el JSON contiene hash.
+- [ ] GET /$hash con hash siendo el correspondiente a una url caducada (que todavia no se ha eliminado de la BD por el scheduler) responde 410 Gone y no existe cabecera Location
+- [ ] GET /$hash con hash siendo el correspondiente a una url valida (no caducada)responde 307 Temporary Redirect
+- [ ] GET /$hash con hash siendo el correspondiente a una url inexistente devuelve 404 Not Found
+- [ ] GET /api/stats/$hash con hash siendo el correspondiente a una url valida (no caducada) devuelve 200 OK con LinkStatsResponse(hash, totalClicks)
+- [ ] GET /api/stats/$hash con hash siendo el correspondiente a una url inexistente devuelve 404 Not Found
 
 ### Scale evidence
 
