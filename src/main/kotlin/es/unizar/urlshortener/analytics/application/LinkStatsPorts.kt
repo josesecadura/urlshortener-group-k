@@ -2,6 +2,7 @@ package es.unizar.urlshortener.analytics.application
 
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.UrlExpirationEvent
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import java.time.Duration
@@ -26,6 +27,8 @@ interface LinkStatsStore {
     )
 
     fun deleteProcessedClicksBefore(cutoff: Instant): Int
+
+    fun deleteByID(hash: String)
 }
 
 @PrimaryPort
@@ -33,6 +36,8 @@ interface UpdateLinkStats {
     fun onCreated(event: ShortUrlCreatedEvent)
 
     fun onClick(event: ClickLoggedEvent)
+
+    fun onDelete(event: UrlExpirationEvent)
 }
 
 @PrimaryPort

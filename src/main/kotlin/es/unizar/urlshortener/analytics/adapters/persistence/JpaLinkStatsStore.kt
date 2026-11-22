@@ -27,4 +27,8 @@ class JpaLinkStatsStore(
     }
 
     override fun deleteProcessedClicksBefore(cutoff: Instant): Int = processed.deleteProcessedBefore(cutoff)
+
+    override fun deleteByID(hash: String) {
+        repository.deleteById(hash)
+    }
 }

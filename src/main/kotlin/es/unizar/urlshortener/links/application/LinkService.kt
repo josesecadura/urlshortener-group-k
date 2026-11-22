@@ -57,6 +57,6 @@ class LinkService(
             // se publica el evento para cada URL que ha caducado
             events.publishEvent(UrlExpirationEvent(hash = h, expirationTime = now))
         }
-        return store.deleteExpiredURLPeriodic(Instant.now())
+        return store.deleteExpiredURLPeriodic(now)
     }
 }

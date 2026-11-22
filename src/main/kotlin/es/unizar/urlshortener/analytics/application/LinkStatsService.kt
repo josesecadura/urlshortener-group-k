@@ -2,6 +2,7 @@ package es.unizar.urlshortener.analytics.application
 
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.UrlExpirationEvent
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -35,4 +36,11 @@ class LinkStatsService(
 
     @Transactional(readOnly = true)
     override fun findByHash(hash: String): LinkStats? = store.findByHash(hash)
+
+// cuando llega evento de url caducada, se borra la fila con las estadisticas de las url,
+// esa url ya no existe (se ha borrado de la BD de links)
+    @Transactional
+    override fun onDelete(event: UrlExpirationEvent) {
+        store.deleteByID(event.hash)
+    }
 }

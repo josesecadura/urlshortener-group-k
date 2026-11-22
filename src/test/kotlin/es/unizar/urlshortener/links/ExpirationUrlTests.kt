@@ -1,10 +1,14 @@
 package es.unizar.urlshortener.links
 
 import com.jayway.jsonpath.JsonPath.read
+import es.unizar.urlshortener.analytics.application.GetLinkStats
 import es.unizar.urlshortener.links.application.CreateShortUrl
 import es.unizar.urlshortener.links.application.ExpiredURL
+import org.awaitility.Awaitility
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -16,6 +20,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -34,6 +39,9 @@ class ExpirationUrlTests {
 
     @Autowired
     lateinit var expiredURL: ExpiredURL
+
+    @Autowired
+    lateinit var getLinkStats: GetLinkStats
 
     @Test
     fun `crear con fecha antigua devuelve error`() {
@@ -142,6 +150,49 @@ class ExpirationUrlTests {
         assertEquals(2, expiredURL.deleteExpiredURL(Instant.now()))
         assertEquals(0, rowsFor(hash))
         assertEquals(0, rowsFor(hash2))
+    }
+
+    @Test
+    fun `crear url, caduca, comprobar analyhics la ha borrado`() {
+        // creo 1 url que caducan en 10 segundos, espero 10 segundos, compruebo si modulo analythics lo ha procesado.
+        // Y si al eliminar tambien lo procesa y borra
+        val url = "https://example.com/${UUID.randomUUID()}"
+        val create =
+            mockMvc
+                .perform(
+                    post("/api/link")
+                        .contentType(APPLICATION_FORM_URLENCODED)
+                        .param("url", url)
+                        .param("expirationTime", Instant.now().plus(10, ChronoUnit.SECONDS).toString()),
+                ).andExpect(status().isCreated)
+                .andReturn()
+        val hash = read<String>(create.response.contentAsString, "$.hash")
+
+        val redirect =
+            mockMvc
+                .perform(
+                    get("/$hash"),
+                ).andReturn()
+        // el procesamiento del evento es asincrono, mockMVC continua en cuanto el controlador responde, no espera a que termine.
+        // Por tanto, tengo que esperar un poco hasta que se consuma el evento y se incremente totalClicks
+        Awaitility.await().atMost(Duration.ofSeconds(10)).untilAsserted {
+            val linkStats = getLinkStats.findByHash(hash)
+            assertNotNull(linkStats)
+            assertEquals(1, linkStats.totalClicks)
+        }
+
+        Thread.sleep(10 * 1000) // se para la ejecucion 10 segundos para esperar a que caduque
+
+        assertEquals(1, rowsFor(hash))
+
+        assertEquals(1, expiredURL.deleteExpiredURL(Instant.now()))
+        assertEquals(0, rowsFor(hash))
+
+        // url ha caducado, si intento obtener estadisticas deberia no tener ninguna. Me devuelve null
+
+        Awaitility.await().atMost(Duration.ofSeconds(10)).untilAsserted {
+            assertNull(getLinkStats.findByHash(hash))
+        }
     }
 
     private fun rowsFor(hash: String): Int =

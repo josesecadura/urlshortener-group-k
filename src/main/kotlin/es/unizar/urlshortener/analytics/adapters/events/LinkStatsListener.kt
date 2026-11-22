@@ -3,6 +3,7 @@ package es.unizar.urlshortener.analytics.adapters.events
 import es.unizar.urlshortener.analytics.application.UpdateLinkStats
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.UrlExpirationEvent
 import org.springframework.modulith.events.ApplicationModuleListener
 import org.springframework.stereotype.Component
 
@@ -18,5 +19,10 @@ class LinkStatsListener(
     @ApplicationModuleListener
     fun onClick(event: ClickLoggedEvent) {
         updateLinkStats.onClick(event)
+    }
+
+    @ApplicationModuleListener
+    fun onClick(event: UrlExpirationEvent) {
+        updateLinkStats.onDelete(event)
     }
 }
