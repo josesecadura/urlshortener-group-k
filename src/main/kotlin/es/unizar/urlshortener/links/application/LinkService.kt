@@ -34,7 +34,10 @@ class LinkService(
     }
 
     @Transactional
-    override fun redirect(hash: String): Redirection {
+    override fun redirect(
+        hash: String,
+        client: ClientInfo,
+    ): Redirection {
         val shortUrl = store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }
         if (shortUrl.expirationTime != null && Instant.now().isAfter(shortUrl.expirationTime)) {
             // url caducada, se elimina de BD. Publico evento para avisar de que lo he borrado
@@ -42,7 +45,8 @@ class LinkService(
             store.delete(hash)
             throw UrlExpiredException(hash)
         }
-        events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
+        // Se cuenta el clic una vez comprobado que el enlace existe y sigue activo
+        events.publishEvent(ClickLoggedEvent(hash = hash, browser = client.browser, platform = client.platform))
         return Redirection(target = shortUrl.target)
     }
 
