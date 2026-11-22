@@ -13,6 +13,16 @@ class JpaLinkStatsStore(
 ) : LinkStatsStore {
     override fun findByHash(hash: String): LinkStats? = repository.findById(hash).map { it.toDomain() }.orElse(null)
 
+    override fun markDeactivated(
+        hash: String,
+        deactivatedAt: Instant,
+    ) {
+        // Si la desactivación llega primero, se crea la fila dentro de la misma transacción
+        repository.insertIfAbsent(hash)
+        // La fila ya puede tener clics y solo se cambia la fecha
+        repository.markDeactivated(hash, deactivatedAt)
+    }
+
     override fun insertIfAbsent(hash: String) {
         repository.insertIfAbsent(hash)
     }

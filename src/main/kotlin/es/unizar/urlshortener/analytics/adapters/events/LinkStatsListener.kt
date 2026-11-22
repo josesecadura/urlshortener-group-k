@@ -3,6 +3,7 @@ package es.unizar.urlshortener.analytics.adapters.events
 import es.unizar.urlshortener.analytics.application.UpdateLinkStats
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
 import org.springframework.modulith.events.ApplicationModuleListener
 import org.springframework.stereotype.Component
 
@@ -13,6 +14,12 @@ class LinkStatsListener(
     @ApplicationModuleListener
     fun onCreated(event: ShortUrlCreatedEvent) {
         updateLinkStats.onCreated(event)
+    }
+
+    // Se recibe la fecha que se guardó en links al desactivar la URL
+    @ApplicationModuleListener
+    fun onDeactivated(event: ShortUrlDeactivatedEvent) {
+        updateLinkStats.onDeactivated(event)
     }
 
     @ApplicationModuleListener

@@ -23,7 +23,10 @@ internal object ManagementKeys {
         return IssuedManagementKey(plaintext = plaintext, sha256 = digest(plaintext))
     }
 
-    fun matches( storedDigest: String, candidateKey: String): Boolean {
+    fun matches(
+        storedDigest: String,
+        candidateKey: String,
+    ): Boolean {
         // Comparamos los hashes para no necesitar guardar la clave original
         val candidateDigest = digest(candidateKey)
         return MessageDigest.isEqual(

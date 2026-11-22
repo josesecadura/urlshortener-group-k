@@ -4,8 +4,17 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
 
 interface JpaLinkStatsRepository : JpaRepository<LinkStatsEntity, String> {
+    // Se rellena la fecha una sola vez, aunque se vuelva a recibir el aviso
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update LinkStatsEntity s set s.deactivatedAt = :date where s.hash = :hash and s.deactivatedAt is null")
+    fun markDeactivated(
+        @Param("hash") hash: String,
+        @Param("date") date: Instant,
+    ): Int
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """

@@ -2,6 +2,7 @@ package es.unizar.urlshortener.analytics.application
 
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import java.time.Duration
@@ -12,11 +13,18 @@ import java.util.UUID
 data class LinkStats(
     val hash: String,
     val totalClicks: Long,
+    // Una fecha vacía indica que aún no se ha recibido una desactivación
+    val deactivatedAt: Instant? = null,
 )
 
 @SecondaryPort
 interface LinkStatsStore {
     fun findByHash(hash: String): LinkStats?
+
+    fun markDeactivated(
+        hash: String,
+        deactivatedAt: Instant,
+    )
 
     fun insertIfAbsent(hash: String)
 
@@ -31,6 +39,8 @@ interface LinkStatsStore {
 @PrimaryPort
 interface UpdateLinkStats {
     fun onCreated(event: ShortUrlCreatedEvent)
+
+    fun onDeactivated(event: ShortUrlDeactivatedEvent)
 
     fun onClick(event: ClickLoggedEvent)
 }
