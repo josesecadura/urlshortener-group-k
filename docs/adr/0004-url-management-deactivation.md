@@ -1,58 +1,80 @@
-# ADR 0004: URL management with secure deactivation and module events
+# ADR 0004: Gestión de URLs con desactivación segura y eventos entre módulos
 
-- **Status:** Proposed
-- **Date:** 2026-10-23
-- **Deciders:** Group K (feature 0008: URL Management / Deactivation)
+- **Estado:** Aceptado
+- **Fecha:** 2026-10-23
+- **Responsables:** Grupo K (feature 0008: URL Management / Deactivation)
 
-## Context
+## Contexto
 
-The URL shortener must allow the creator of a short URL to deactivate it with a management key. A deactivated URL must no longer redirect: `GET /{hash}` returns `410 Gone`. The seed endpoints (`POST /api/link`, `GET /{hash}`, and `GET /api/stats/{hash}`) must retain their existing successful response contracts. The product runs two application replicas behind nginx, sharing PostgreSQL.
+Se necesita permitir que el creador de una URL corta pueda desactivarla utilizando una clave de gestión generada durante su creación. Una vez desactivada, la URL debe dejar de redirigir y `GET /{hash}` debe devolver `410 Gone`.
 
-Feature 0008 has weight **13**, so it needs a new domain event consumed by another Spring Modulith module. The base application already uses the closed `links`, `clicks`, and `analytics` modules and a ports-and-adapters structure enforced with jMolecules. URL expiration (feature 0009) and redirect caching (feature 0006) are separate workstreams and must not be broken by this feature.
+Los endpoints existentes (`POST /api/link`, `GET /{hash}` y `GET /api/stats/{hash}`) deben mantener su comportamiento. La aplicación utiliza dos réplicas detrás de Nginx que comparten una base de datos PostgreSQL.
 
-## Decision
+La funcionalidad 0008 tiene un peso de 13, por lo que se necesita un nuevo evento de dominio que sea consumido por otro módulo de Spring Modulith. La aplicación ya está organizada en los módulos `links`, `clicks` y `analytics`, utilizando una arquitectura de puertos y adaptadores con jMolecules.
 
-1. **Ownership and module boundaries.** `links` owns managed-link creation, management keys, the authoritative deactivation state, and redirect behavior. `analytics` consumes a new deactivation event and updates an internal read-model status. No module imports another module's `application`, `domain`, or `adapters` packages.
+También se debe mantener la compatibilidad con la caducidad de URLs (0009) y la caché de redirecciones (0006), que se desarrollan por separado.
 
-2. **HTTP contract.** Add `POST /api/managed-links` to create a manageable link without changing the existing `POST /api/link` JSON contract. It accepts a form `url` and responds with `201 Created`, a `Location` pointing to the short URL, and JSON containing the short URL, hash, and **one-time** `managementKey`. Set `Cache-Control: no-store` on this response. Add `DELETE /api/managed-links/{hash}`, taking the key in `Authorization: Bearer <managementKey>`. It returns `204 No Content` when successfully deactivated (and on an authorized repeat), `403 Forbidden` for a missing or invalid key, and `404 Not Found` for an unknown hash. New error responses use RFC 9457 `ProblemDetail`. A deactivated `GET /{hash}` returns `410 Gone` via `ProblemDetail`; an active link still redirects with `307` and its original `Location`.
+## Decisión
 
-3. **Capability-key storage.** Generate a high-entropy management key from 32 random bytes using `SecureRandom`, encoded as URL-safe Base64 without padding. Persist only its SHA-256 digest in `short_url` (`managementKeyHash`), never the plaintext key. The key is not included in application logs or events. Existing links without a management key cannot be deactivated through this API. This design uses JDK cryptography and Spring's existing dependencies; **no new library is required**.
+1. **Responsabilidad de los módulos.** El módulo `links` se encarga de crear las URLs administrables, generar y comprobar las claves de gestión, guardar el estado de desactivación y controlar las redirecciones. El módulo `analytics` recibe el evento de desactivación y actualiza su registro de estadísticas. Se mantiene la separación entre módulos sin acceder directamente a los paquetes internos `application`, `domain` o `adapters` de otros módulos.
 
-4. **Deactivation and concurrency.** Use a soft-deactivation timestamp (`deactivatedAt`) in the `links` domain and database, rather than deleting the URL. Make the update conditional and atomic in PostgreSQL, requiring a matching key digest and `deactivatedAt IS NULL`. Only the transaction that changes active to deactivated may publish the event. A duplicate authorized DELETE does not publish a second event. The database is the source of truth on both replicas; never keep the deactivation state only in process memory. Redirect checks this state before publishing a click event.
+2. **Endpoints HTTP.** Se añade `POST /api/managed-links` para crear URLs administrables sin modificar el comportamiento de `POST /api/link`. Recibe el parámetro `url` y devuelve `201 Created`, una cabecera `Location` con la URL corta y un JSON con `hash`, `url` y `managementKey`. La clave solo se devuelve durante la creación y se utiliza `Cache-Control: no-store` para evitar que la respuesta se almacene en caché.
 
-5. **New cross-module event.** Define `ShortUrlDeactivatedEvent(hash, deactivatedAt)` in the public base package `es.unizar.urlshortener.links`. `links` publishes it when deactivation succeeds. `analytics` consumes it using `@ApplicationModuleListener` and marks the corresponding `LinkStats` read model as deactivated. The consumer must be idempotent and handle the possibility that creation and deactivation events are processed in a different order (for example, via upsert). The existing public JSON response of `GET /api/stats/{hash}` remains unchanged. The listener is eventually consistent within one application instance; the shared database stores durable state. Cross-replica cache invalidation and external broker delivery are **not** claimed by this Level-3 feature; feature 0006 may subscribe to this event when implemented.
+   Para desactivar una URL se añade `DELETE /api/managed-links/{hash}`, que recibe la clave mediante `Authorization: Bearer {managementKey}`. Devuelve `204 No Content` cuando la desactivación se realiza correctamente o cuando se repite con una clave válida, `403 Forbidden` si la clave falta o es incorrecta y `404 Not Found` si la URL no existe. Los errores utilizan `ProblemDetail`.
 
-6. **Ports and adapters.** Add management use-case ports to `links.application`, keep HTTP handling in `links.adapters.web` and database access in `links.adapters.persistence`. Extend the current `ShortUrl` domain and `ShortUrlEntity` mappings without moving code between modules or replacing jMolecules stereotypes.
+   Una URL desactivada devuelve `410 Gone` al intentar acceder a ella. Las URLs activas mantienen la redirección `307` con la cabecera `Location` correspondiente.
 
-## Consequences
+3. **Almacenamiento de la clave de gestión.** Se genera una clave aleatoria de 32 bytes mediante `SecureRandom` y se codifica en Base64 compatible con URLs. En PostgreSQL solo se almacena su hash SHA-256 en el campo `managementKeyHash`, sin guardar la clave original.
 
-- **Positive:** Seed endpoints remain compatible, the key cannot be recovered from database contents, duplicate deactivations do not produce duplicate events, and both application replicas consult the same authoritative PostgreSQL state.
-- **Trade-offs:** A separate managed-creation endpoint must be documented. Analytics can briefly lag the authoritative deactivation state because Modulith listeners are asynchronous. In-process events do not provide cross-JVM fan-out; the eventual feature-0006 cache strategy must address this separately.
-- **Integration:** Coordinate with the owner of feature 0006 to reuse the deactivation event for future cache invalidation rather than introduce a competing event. Avoid changes to the expiry scheduler owned by feature 0009.
+   La clave no se incluye en los eventos ni en los registros de la aplicación. Las URLs creadas mediante el endpoint original, que no tienen clave de gestión, no se pueden desactivar mediante este mecanismo.
 
-## Alternatives considered
+   Se utilizan las herramientas criptográficas de Java, por lo que no hace falta añadir nuevas dependencias.
 
-| Alternative | Why rejected |
+4. **Desactivación y concurrencia.** En lugar de eliminar físicamente una URL, se guarda la fecha de desactivación en `deactivatedAt`.
+
+   Se utiliza una actualización condicional y atómica en PostgreSQL, comprobando que la clave coincide y que `deactivatedAt IS NULL`. Así, si dos peticiones intentan desactivar la misma URL al mismo tiempo, solo una realiza el cambio de estado y publica el evento.
+
+   Si se repite una petición con la clave correcta, se devuelve `204`, pero no se vuelve a publicar el evento. PostgreSQL mantiene el estado compartido entre las réplicas y se comprueba la desactivación antes de registrar un nuevo clic.
+
+5. **Evento entre módulos.** Se define `ShortUrlDeactivatedEvent(hash, deactivatedAt)` en el paquete público `es.unizar.urlshortener.links`.
+
+   Cuando se desactiva una URL, `links` publica el evento y `analytics` lo recibe mediante `@ApplicationModuleListener`. El consumidor actualiza la fecha de desactivación en sus estadísticas, sin modificar la respuesta pública de `GET /api/stats/{hash}`.
+
+   Se comprueba que el procesamiento sea idempotente y que la fecha se conserve aunque los eventos de creación, clic y desactivación lleguen en distinto orden.
+
+   El procesamiento se realiza de forma asíncrona dentro de Spring Modulith y el estado se conserva en PostgreSQL. Los eventos locales no se propagan automáticamente entre distintas instancias de la aplicación. La invalidación de caché entre réplicas corresponde a la integración con la funcionalidad 0006.
+
+6. **Puertos y adaptadores.** Se añaden los casos de uso necesarios en `links.application`, manteniendo los controladores HTTP en `links.adapters.web` y el acceso a PostgreSQL en `links.adapters.persistence`.
+
+   Se amplían las clases `ShortUrl` y `ShortUrlEntity` para incorporar la clave de gestión y la fecha de desactivación, conservando la arquitectura existente y las anotaciones de jMolecules.
+
+## Consecuencias
+
+- **Positivas:** Los endpoints originales mantienen su comportamiento. Las claves de gestión no se guardan en texto plano, las desactivaciones repetidas no generan eventos duplicados y ambas réplicas utilizan PostgreSQL como fuente de información compartida.
+- **Limitaciones:** Se introduce un endpoint adicional para crear URLs administrables. El módulo `analytics` puede tardar un breve intervalo en reflejar la desactivación porque procesa los eventos de forma asíncrona.
+- **Integración:** La caché de la 0006 debe invalidarse cuando una URL se desactive para evitar redirecciones antiguas. También se debe mantener la compatibilidad con el proceso de caducidad de la 0009.
+
+## Alternativas consideradas
+
+| Alternativa | Motivo por el que se descarta |
 | --- | --- |
-| Add `managementKey` to the existing `POST /api/link` JSON body | Would change the seed success representation; a dedicated endpoint preserves the original contract. |
-| Store management keys as plaintext | Exposes control of all links if the database is read; a high-entropy capability can be verified using only its digest. |
-| Physically delete the short URL | Loses its deactivation status and risks treating a deliberately disabled URL as an unknown `404`; soft-deactivation supports `410`. |
-| Check then update in separate database operations | Two simultaneous requests could both observe an active link and both publish a deactivation event. |
-| Directly call `analytics` internals from `links` | Breaks the closed Spring Modulith module boundaries and the hexagonal architecture. |
-| Use an external broker for deactivation | Unnecessary for the chosen weight-13 / Level-3 PoC; externalized events belong to a Level-4 design. |
+| Añadir `managementKey` a la respuesta de `POST /api/link` | Modificaría la respuesta del endpoint original. Se utiliza otro endpoint para mantener la compatibilidad |
+| Guardar las claves de gestión en texto plano | Permitiría recuperar las claves si se accede a la base de datos. Se almacena únicamente su hash SHA-256 |
+| Eliminar físicamente la URL | Se perdería el estado de desactivación y la URL podría devolver `404` en lugar de `410` |
+| Comprobar el estado y actualizarlo en operaciones separadas | Dos peticiones concurrentes podrían desactivar la misma URL y publicar eventos duplicados |
+| Acceder directamente a las clases internas de `analytics` desde `links` | Rompería la separación de módulos y la arquitectura hexagonal |
+| Utilizar un broker externo para la desactivación | No es necesario para el nivel 3 de esta funcionalidad. Se utiliza el sistema de eventos de Spring Modulith |
 
-## Evidence (defence)
+## Evidencias (defensa)
 
-Tests below are **planned** as part of feature 0008, not yet present in the repository when this ADR is drafted.
+- [ ] **Código / PR:** Pendiente de enlazar cuando se abra la PR
+- [x] **Pruebas de integración:** En `UrlManagementFlowTests` se comprueban la creación, autorización, desactivación, publicación del evento y actualización de las estadísticas. En `LinkStatsConcurrencyTests` se comprueba la reentrega de eventos y su procesamiento cuando llegan fuera de orden
+- [x] **Pruebas de la funcionalidad (Windows):** Se ejecuta `.\gradlew.bat test --tests "*UrlManagementFlowTests" --tests "*LinkStatsConcurrencyTests"` para repetir las comprobaciones
+- [x] **Arquitectura:** Se ejecutaron las pruebas de modularidad y arquitectura mediante `check`
+- [x] **Comprobaciones de calidad:** Se ejecutó `clean check bootJar` con JDK 25. Los resultados se recogen en la [ficha de la 0008](../features/0008-url-management.md)
+- [x] **Comprobación con dos réplicas y caché:** Se comprobó la creación, redirección y desactivación con dos procesos del JAR y PostgreSQL compartido.
 
-- [ ] **Code / PR:** Link the feature-0008 Pull Request once opened.
-- [ ] **End-to-end integration:** `UrlManagementFlowTests` tests creation, authorization, `307` before deactivation, `410` afterwards, idempotent deactivation and the consumed event in `analytics`.
-- [ ] **Feature test (Windows):** `./gradlew.bat test --tests "es.unizar.urlshortener.UrlManagementFlowTests"`
-- [ ] **Module integrity:** `./gradlew.bat test --tests "es.unizar.urlshortener.ModularityTests"`
-- [ ] **Full quality gate:** `./gradlew.bat check`
-- [ ] **Product with two replicas:** `docker compose up --build`, then verify the flow through `http://localhost:8080`.
-
-# Architecture diagram
+## Diagrama de arquitectura
 
 ```mermaid
 flowchart TD
@@ -62,6 +84,6 @@ flowchart TD
     E --> C
     E --> F["ShortUrlDeactivatedEvent"]
     F --> G["analytics: LinkStatsListener"]
-    G --> H["Actualizar read model"]
+    G --> H["Actualizar estadísticas"]
     H --> C
 ```
