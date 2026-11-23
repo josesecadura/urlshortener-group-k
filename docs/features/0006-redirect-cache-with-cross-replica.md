@@ -22,8 +22,18 @@ Caches hash → target in a shared store. When a URL is deactivated or deleted, 
 
 ### Acceptance criteria
 
-- [ ] …
-- [ ] …
+### Criterios de aceptación
+
+- **Caché en Redis con TTL:** Al crear una URL acortada y realizar una redirección, se almacena en Redis la asociación `hash → URL original` con un tiempo de expiración (TTL). La redirección devuelve el código HTTP `307` y la cabecera `Location` correcta.
+
+- **Invalidación entre réplicas:** Cuando una URL almacenada en caché se desactiva o elimina, su entrada se invalida en todas las réplicas (`app1` y `app2`). Las solicitudes posteriores dejan de devolver `307` y responden con `410 Gone` si está desactivada o `404 Not Found` si ha sido eliminada.
+
+- **URL inexistente:** Si se solicita la redirección de un hash inexistente, la aplicación devuelve `404 Not Found` y no almacena ninguna entrada para ese hash en Redis.
+
+- **Desactivación no autorizada:** Si se intenta desactivar una URL sin autorización, la operación es rechazada y la entrada de caché permanece válida. La URL continúa redirigiendo correctamente con `307`.
+
+- **Recuperación ante fallos del broker:** Si el broker de mensajería deja de estar disponible durante una desactivación o eliminación, el evento de invalidación queda pendiente sin perderse. Cuando el broker vuelve a funcionar, el evento se procesa y la caché queda invalidada correctamente.
+
 
 ### Scale evidence
 
