@@ -4,10 +4,12 @@ import es.unizar.urlshortener.analytics.application.GetLinkStats
 import es.unizar.urlshortener.analytics.application.UpdateLinkStats
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
@@ -21,6 +23,27 @@ class LinkStatsConcurrencyTests {
 
     @Autowired
     lateinit var getLinkStats: GetLinkStats
+
+    @Test
+    fun `deactivation before creation survives a late click and a repeated event`() {
+        val hash = "order-${UUID.randomUUID()}"
+        val event = ShortUrlDeactivatedEvent(hash, Instant.parse("2026-10-23T12:00:00Z"))
+
+        // Se empieza por la desactivación para que todavía no exista la fila
+        updateLinkStats.onDeactivated(event)
+        assertEquals(0L, getLinkStats.findByHash(hash)?.totalClicks)
+        assertEquals(event.deactivatedAt, getLinkStats.findByHash(hash)?.deactivatedAt)
+
+        // Se simula un clic que ocurrió antes de la baja pero se procesó más tarde
+        updateLinkStats.onCreated(ShortUrlCreatedEvent(hash, "https://example.com"))
+        updateLinkStats.onClick(ClickLoggedEvent(hash = hash, occurredAt = event.deactivatedAt.minusSeconds(1)))
+        updateLinkStats.onDeactivated(event)
+
+        // Al volver a recibir el aviso se conservan el clic y la fecha original
+        val result = getLinkStats.findByHash(hash)
+        assertEquals(1L, result?.totalClicks)
+        assertEquals(event.deactivatedAt, result?.deactivatedAt)
+    }
 
     @Test
     fun `concurrent first clicks on a missing row are all counted`() {

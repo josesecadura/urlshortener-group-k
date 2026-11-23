@@ -12,6 +12,13 @@ interface ShortUrlStore {
 
     fun findByHash(hash: String): Optional<ShortUrl>
 
+    // Devuelve 1 si se desactiva la URL y 0 si ya estaba desactivada.
+    fun deactivate(
+        hash: String,
+        managementKeyHash: String,
+        deactivatedAt: Instant,
+    ): Int
+
     fun delete(hash: String)
 
     fun deleteExpiredURLPeriodic(now: Instant): Int
@@ -46,6 +53,13 @@ data class CreatedShortUrl(
     val target: String,
 )
 
+/** The plaintext management key is returned only at creation time. */
+data class ManagedShortUrlCreated(
+    val hash: String,
+    val target: String,
+    val managementKey: String,
+)
+
 data class Redirection(
     val target: String,
 )
@@ -62,6 +76,20 @@ class UrlExpiredException(
     hash: String,
 ) : RuntimeException("[$hash] has expired")
 
+class InvalidManagementKeyException : RuntimeException("Invalid management key")
+
+class UrlDeactivatedException(
+    hash: String,
+) : RuntimeException("[$hash] has been deactivated")
+
+@PrimaryPort
+fun interface DeactivateManagedShortUrl {
+    fun deactivate(
+        hash: String,
+        managementKey: String,
+    )
+}
+
 @PrimaryPort
 fun interface CreateShortUrl {
     fun create(
@@ -72,6 +100,11 @@ fun interface CreateShortUrl {
     // Para crear URL sin fecha de caducidad, al create de arriba no puedo poner expirationTime: Instant?=Null
     // para valor por defecto al ser un metodo abstracto
     fun create(url: String) = create(url, null)
+}
+
+@PrimaryPort
+fun interface CreateManagedShortUrl {
+    fun createManaged(url: String): ManagedShortUrlCreated
 }
 
 @PrimaryPort

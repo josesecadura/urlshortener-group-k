@@ -2,6 +2,7 @@ package es.unizar.urlshortener.analytics.application
 
 import es.unizar.urlshortener.clicks.ClickLoggedEvent
 import es.unizar.urlshortener.links.ShortUrlCreatedEvent
+import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,6 +21,12 @@ class LinkStatsService(
     override fun onCreated(event: ShortUrlCreatedEvent) {
         store.insertIfAbsent(event.hash)
         log.info { "stats ready for ${event.hash}" }
+    }
+
+    @Transactional
+    override fun onDeactivated(event: ShortUrlDeactivatedEvent) {
+        // Se usa la fecha del evento aunque el aviso se procese más tarde
+        store.markDeactivated(event.hash, event.deactivatedAt)
     }
 
     @Transactional

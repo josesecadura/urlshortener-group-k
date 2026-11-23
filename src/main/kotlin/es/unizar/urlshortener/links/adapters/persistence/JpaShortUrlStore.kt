@@ -14,6 +14,12 @@ class JpaShortUrlStore(
 
     override fun findByHash(hash: String): Optional<ShortUrl> = repository.findById(hash).map { it.toDomain() }
 
+    override fun deactivate(
+        hash: String,
+        managementKeyHash: String,
+        deactivatedAt: Instant,
+    ): Int = repository.deactivate(hash, managementKeyHash, deactivatedAt)
+
     override fun delete(hash: String) = repository.deleteById(hash)
 
     override fun deleteExpiredURLPeriodic(now: Instant) = repository.deleteExpiredURL(now)
