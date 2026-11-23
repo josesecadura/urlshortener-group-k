@@ -39,9 +39,14 @@ archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-rabbitmq = { module = "org.testcontainers:testcontainers-rabbitmq" }
 jmolecules-bom = { module = "org.jmolecules:jmolecules-bom", version.ref = "jmolecules" }
 jmolecules-hexagonal = { module = "org.jmolecules:jmolecules-hexagonal-architecture" }
 jmolecules-archunit = { module = "org.jmolecules.integrations:jmolecules-archunit" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.ref = "shedlock" }
 shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
+spring-rabbit-test={module="org.springframework.amqp:spring-rabbit-test"}
+spring-boot-starter-amqp={module="org.springframework.boot:spring-boot-starter-amqp"}
+spring-boot-rest-client={module="org.springframework.boot:spring-boot-restclient"}
+spring-boot-rest-test-client={module="org.springframework.boot:spring-boot-resttestclient"}

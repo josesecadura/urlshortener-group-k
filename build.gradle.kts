@@ -52,6 +52,9 @@ dependencies {
     implementation(libs.shedlock.spring)
     implementation(libs.shedlock.provider.jdbc.template)
 
+    implementation(libs.spring.boot.starter.amqp)
+    implementation(libs.spring.boot.rest.client)
+    testImplementation(libs.spring.boot.rest.test.client)
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.spring.boot.starter.webmvc.test)
     testImplementation(libs.modulith.starter.test)
@@ -59,7 +62,9 @@ dependencies {
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.rabbitmq)
     testImplementation(libs.jmolecules.archunit)
+    testImplementation(libs.spring.rabbit.test)
 }
 
 tasks.withType<Test> {

@@ -15,6 +15,7 @@ spring:
       jdbc:
         schema-initialization:
           enabled: true
+      republish-outstanding-events-on-restart: true #reenvia eventos que no se han tratado, lo reenvia al reiniciar la aplicacion
 
 urlshortener:
   analytics:
