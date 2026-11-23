@@ -3,43 +3,66 @@ package es.unizar.urlshortener.links.adapters.cache
 
 import es.unizar.urlshortener.links.application.RedirectCache
 import es.unizar.urlshortener.links.domain.ShortUrl
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
 
 @Component
+@ConditionalOnProperty(
+    prefix = "urlshortener.redirect-cache",
+    name = ["provider"],
+    havingValue = "redis",
+)
 class RedisRedirectCache(
     private val redis: StringRedisTemplate,
+    @Value("\${urlshortener.redirect-cache.ttl}")
+    private val ttl: Duration,
 ) : RedirectCache {
-    // Tiempo maximo que una URL permanece en cache
-    private val ttl = Duration.ofMinutes(5)
-
-    // Prefijo para identificar nuestras claves en Redis
+    // Prefijo como id para las claves en Redis
     private fun key(hash: String) = "redirect:$hash"
 
+    private fun parseCachedUrl(
+        hash: String,
+        value: String,
+    ): ShortUrl? =
+        value
+            .indexOf('|')
+            .takeIf { it >= 0 }
+            ?.let { separator ->
+                val expirationText = value.substring(0, separator)
+                val expirationTime =
+                    if (expirationText.isEmpty()) {
+                        null
+                    } else {
+                        expirationText.toLongOrNull()?.let { Instant.ofEpochMilli(it) }
+                    }
+
+                if (expirationText.isNotEmpty() && expirationTime == null) {
+                    null
+                } else {
+                    ShortUrl(
+                        hash = hash,
+                        target = value.substring(separator + 1),
+                        expirationTime = expirationTime,
+                    )
+                }
+            }
+
     // Buscar una URL en Redis
-    override fun get(hash: String): ShortUrl? {
-        val value = redis.opsForValue().get(key(hash)) ?: return null
-
-        // Formato almacenado: expiracion|target
-        val separator = value.indexOf('|')
-        if (separator < 0) return null
-
-        val expiration = value.substring(0, separator)
-        val target = value.substring(separator + 1)
-
-        val expirationTime =
-            expiration.takeIf { it.isNotEmpty() }
-                ?.toLong()
-                ?.let { Instant.ofEpochMilli(it) }
-
-        return ShortUrl(
-            hash = hash,
-            target = target,
-            expirationTime = expirationTime,
-        )
-    }
+    override fun get(hash: String): ShortUrl? =
+        redis
+            .opsForValue()
+            .get(key(hash))
+            ?.let { value ->
+                parseCachedUrl(hash, value).also { cachedUrl ->
+                    if (cachedUrl == null) {
+                        evict(hash)
+                    }
+                }
+            }
 
     // Guardar una URL con TTL
     override fun put(shortUrl: ShortUrl) {

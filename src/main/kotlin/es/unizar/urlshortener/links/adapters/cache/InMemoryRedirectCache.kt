@@ -2,9 +2,18 @@ package es.unizar.urlshortener.links.adapters.cache
 
 import es.unizar.urlshortener.links.application.RedirectCache
 import es.unizar.urlshortener.links.domain.ShortUrl
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 
 // Cache en memoria local ahora mismo luego se hará con redis
+@Component
+@ConditionalOnProperty(
+    prefix = "urlshortener.redirect-cache",
+    name = ["provider"],
+    havingValue = "memory",
+    matchIfMissing = true,
+)
 class InMemoryRedirectCache : RedirectCache {
     // Almacenamos las URLs con ese hash
     private val entries = ConcurrentHashMap<String, ShortUrl>()
