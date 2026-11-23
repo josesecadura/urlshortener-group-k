@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
 
 @SpringBootTest
@@ -33,6 +34,9 @@ class RedirectCacheTests {
 
     @Autowired
     lateinit var events: ApplicationEventPublisher
+
+    @Autowired
+    lateinit var transaction: TransactionTemplate
 
     // Spy para contar las consultas reales al repositorio
     @MockitoSpyBean
@@ -87,11 +91,28 @@ class RedirectCacheTests {
         assertEquals(target, redirectShortUrl.redirect(hash).target)
         assertNotNull(cache.get(hash))
 
-        // Publicar evento de actualizacion
-        events.publishEvent(ShortUrlUpdatedEvent(hash))
+        // Publicar el evento dentro de una transaccion que termina correctamente
+        transaction.executeWithoutResult {
+            events.publishEvent(ShortUrlUpdatedEvent(hash))
+        }
 
         // Comprobar que se ha eliminado de cache
         assertNull(cache.get(hash))
+    }
+
+    @Test
+    fun `evento de actualizacion en rollback no invalida la cache`() {
+        val (hash, target) = crearUrl()
+
+        assertEquals(target, redirectShortUrl.redirect(hash).target)
+        assertNotNull(cache.get(hash))
+
+        transaction.executeWithoutResult { status ->
+            events.publishEvent(ShortUrlUpdatedEvent(hash))
+            status.setRollbackOnly()
+        }
+
+        assertNotNull(cache.get(hash))
     }
 
     @Test

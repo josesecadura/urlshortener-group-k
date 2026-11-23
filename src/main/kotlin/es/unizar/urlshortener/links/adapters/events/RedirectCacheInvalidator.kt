@@ -2,16 +2,16 @@ package es.unizar.urlshortener.links.adapters.events
 
 import es.unizar.urlshortener.links.ShortUrlUpdatedEvent
 import es.unizar.urlshortener.links.application.RedirectCache
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
+import org.springframework.transaction.event.TransactionPhase
+import org.springframework.transaction.event.TransactionalEventListener
 
-// Consumidor del evento: cuando una URL cambia, la saca de cache
 @Component
 class RedirectCacheInvalidator(
     private val cache: RedirectCache,
 ) {
-    // Sincrono, procesamos antes de continuar para invalidar la cache
-    @EventListener
+    // Solo se invalida cuando la modificacion de la URL ya se ha confirmado
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun on(event: ShortUrlUpdatedEvent) {
         cache.evict(event.hash)
     }

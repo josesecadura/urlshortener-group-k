@@ -5,6 +5,7 @@ import es.unizar.urlshortener.RedisTestContainerConfiguration
 import es.unizar.urlshortener.links.adapters.cache.RedisRedirectCache
 import es.unizar.urlshortener.links.application.CreateManagedShortUrl
 import es.unizar.urlshortener.links.application.DeactivateManagedShortUrl
+import es.unizar.urlshortener.links.application.InvalidManagementKeyException
 import es.unizar.urlshortener.links.application.RedirectCache
 import es.unizar.urlshortener.links.application.RedirectShortUrl
 import es.unizar.urlshortener.links.application.ShortUrlStore
@@ -57,7 +58,6 @@ class RedisRedirectCacheTests {
     @Autowired
     lateinit var store: ShortUrlStore
 
-    // Guardamos los hashes para limpiar los datos al terminar cada test
     // Entradas de redis a eliminar
     private val hashes = mutableListOf<String>()
 
@@ -167,5 +167,27 @@ class RedisRedirectCacheTests {
 
         // La URL desactivada no debe volver a guardarse en Redis
         assertNull(cache.get(hash))
+    }
+
+    @Test
+    fun `clave de gestion incorrecta no invalida Redis`() {
+        val target = "https://example.com/${UUID.randomUUID()}"
+        val created = createManaged.createManaged(target)
+        val hash = created.hash
+
+        hashes.add(hash)
+        storedHashes.add(hash)
+
+        // Llenamos Redis antes de intentar la desactivacion no autorizada
+        assertEquals(target, redirect.redirect(hash).target)
+        assertNotNull(cache.get(hash))
+
+        assertThrows(InvalidManagementKeyException::class.java) {
+            deactivateManaged.deactivate(hash, "clave-incorrecta")
+        }
+
+        // La URL sigue activa, asi que el evento no se publica ni se borra Redis
+        assertNotNull(cache.get(hash))
+        assertEquals(target, redirect.redirect(hash).target)
     }
 }
