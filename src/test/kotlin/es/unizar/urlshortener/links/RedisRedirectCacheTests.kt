@@ -3,11 +3,18 @@ package es.unizar.urlshortener.links
 
 import es.unizar.urlshortener.RedisTestContainerConfiguration
 import es.unizar.urlshortener.links.adapters.cache.RedisRedirectCache
+import es.unizar.urlshortener.links.application.CreateManagedShortUrl
+import es.unizar.urlshortener.links.application.DeactivateManagedShortUrl
 import es.unizar.urlshortener.links.application.RedirectCache
+import es.unizar.urlshortener.links.application.RedirectShortUrl
+import es.unizar.urlshortener.links.application.ShortUrlStore
+import es.unizar.urlshortener.links.application.UrlDeactivatedException
 import es.unizar.urlshortener.links.domain.ShortUrl
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -38,12 +45,35 @@ class RedisRedirectCacheTests {
     @Value("\${urlshortener.redirect-cache.ttl}")
     lateinit var ttl: Duration
 
+    @Autowired
+    lateinit var createManaged: CreateManagedShortUrl
+
+    @Autowired
+    lateinit var deactivateManaged: DeactivateManagedShortUrl
+
+    @Autowired
+    lateinit var redirect: RedirectShortUrl
+
+    @Autowired
+    lateinit var store: ShortUrlStore
+
+    // Guardamos los hashes para limpiar los datos al terminar cada test
+    // Entradas de redis a eliminar
     private val hashes = mutableListOf<String>()
 
-    // Eliminamos las entradas creadas para no afectar a otros tests
+    // Entradas de PostgreSQL a eliminar
+    private val storedHashes = mutableListOf<String>()
+
     @AfterEach
     fun limpiarRedis() {
+        // Eliminamos las entradas creadas en Redis
         hashes.forEach(cache::evict)
+
+        // Eliminamos las URLs creadas en PostgreSQL
+        storedHashes.forEach(store::delete)
+
+        hashes.clear()
+        storedHashes.clear()
     }
 
     @Test
@@ -101,5 +131,41 @@ class RedisRedirectCacheTests {
 
         // Comprobamos que Redis no ha almacenado la URL caducada
         assertNull(redis.opsForValue().get("redirect:$hash"))
+    }
+
+    @Test
+    fun `desactivar URL invalida Redis e impide nuevas redirecciones`() {
+        val target = "https://example.com/${UUID.randomUUID()}"
+
+        // Creamos una URL gestionable con su clave de administracion
+        val created = createManaged.createManaged(target)
+        val hash = created.hash
+
+        // Registramos el hash para limpiar Redis y PostgreSQL al terminar
+        hashes.add(hash)
+        storedHashes.add(hash)
+
+        // Primera redireccion: funciona y guarda la URL en Redis
+        assertEquals(target, redirect.redirect(hash).target)
+        assertNotNull(cache.get(hash))
+
+        // Desactivamos la URL utilizando su clave de gestion
+        deactivateManaged.deactivate(hash, created.managementKey)
+
+        // Comprobamos que el evento ha eliminado la entrada de Redis
+        assertNull(cache.get(hash))
+
+        // La URL desactivada ya no debe permitir redirecciones
+        assertThrows(UrlDeactivatedException::class.java) {
+            redirect.redirect(hash)
+        }
+
+        // Comprobamos que tampoco vuelve a funcionar en la segunda peticion
+        assertThrows(UrlDeactivatedException::class.java) {
+            redirect.redirect(hash)
+        }
+
+        // La URL desactivada no debe volver a guardarse en Redis
+        assertNull(cache.get(hash))
     }
 }

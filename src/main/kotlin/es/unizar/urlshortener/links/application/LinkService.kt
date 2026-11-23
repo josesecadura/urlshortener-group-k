@@ -91,7 +91,18 @@ class LinkService(
         // 1) caché; 2) si falla, BD y se guarda en caché para la próxima
         val shortUrl =
             cache.get(hash)
-                ?: store.findByHash(hash).orElseThrow { LinkNotFoundException(hash) }.also { cache.put(it) }
+                ?: store
+                    .findByHash(hash)
+                    .orElseThrow { LinkNotFoundException(hash) }
+                    .also {
+                        // Solo guardamos en cache URLs activas y no caducadas
+                        if (
+                            it.deactivatedAt == null &&
+                            (it.expirationTime == null || Instant.now().isBefore(it.expirationTime))
+                        ) {
+                            cache.put(it)
+                        }
+                    }
         // Una URL desactivada ya no debe redirigir al destino
         if (shortUrl.deactivatedAt != null) {
             throw UrlDeactivatedException(hash)
