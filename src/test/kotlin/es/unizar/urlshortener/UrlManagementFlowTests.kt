@@ -1,12 +1,20 @@
 package es.unizar.urlshortener
 
 import com.jayway.jsonpath.JsonPath.read
+import es.unizar.urlshortener.analytics.adapters.persistence.JpaLinkStatsRepository
+import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
+import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+import org.springframework.test.context.event.ApplicationEvents
+import org.springframework.test.context.event.RecordApplicationEvents
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -14,12 +22,22 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Duration
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@RecordApplicationEvents
 class UrlManagementFlowTests {
     @Autowired
     lateinit var mockMvc: MockMvc
+
+    @Autowired
+    lateinit var stats: JpaLinkStatsRepository
+
+    @Autowired
+    lateinit var events: ApplicationEvents
+
+    private fun deactivations(hash: String) = events.stream(ShortUrlDeactivatedEvent::class.java).filter { it.hash == hash }.toList()
 
     @Test
     fun `deactivating a link stops redirects`() {
@@ -43,6 +61,20 @@ class UrlManagementFlowTests {
         mockMvc
             .perform(delete("/api/managed-links/$hash").header("Authorization", "Bearer $key"))
             .andExpect(status().isNoContent)
+
+        // Se cuentan los avisos de este enlace aunque se haya enviado el DELETE dos veces
+        val published = deactivations(hash)
+        assertEquals(1, published.size)
+
+        // Se espera a que lleguen tanto el clic anterior como la desactivación
+        await().atMost(Duration.ofSeconds(5)).untilAsserted {
+            val row = stats.findById(hash).orElse(null)
+            assertEquals(1L, row?.totalClicks)
+            // La base de datos guarda la fecha con menos precisión que Instant
+            val date = row?.deactivatedAt
+            assertTrue(date != null && Duration.between(published.single().deactivatedAt, date).abs() <= Duration.ofMillis(1))
+        }
+        mockMvc.perform(get("/api/stats/$hash")).andExpect(jsonPath("$.deactivatedAt").doesNotExist())
     }
 
     @Test
@@ -57,6 +89,14 @@ class UrlManagementFlowTests {
         mockMvc
             .perform(get("/$hash"))
             .andExpect(status().isTemporaryRedirect)
+
+        // Se comprueba el rechazo antes de usar la clave correcta
+        assertEquals(0, deactivations(hash).size)
+        await().atMost(Duration.ofSeconds(5)).untilAsserted {
+            val row = stats.findById(hash).orElse(null)
+            assertEquals(1L, row?.totalClicks)
+            assertNull(row?.deactivatedAt)
+        }
 
         mockMvc
             .perform(delete("/api/managed-links/$hash").header("Authorization", "Bearer $key"))
