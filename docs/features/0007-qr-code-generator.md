@@ -18,12 +18,19 @@ Generates a QR code PNG (or SVG) for any shortened URL on demand via content neg
 
 ## Later (after the 2 October agreement)
 
-- **ADR:** none | docs/adr/NNNN-….md *(by when a choice locks a module, the broker, or a library)*
+- **ADR:** [0007 · Generación asíncrona de códigos QR](../adr/0007-qr-code-generation.md)
 
 ### Acceptance criteria
 
-- [ ] …
-- [ ] …
+- [ ] **Generación del QR:** Al hacer `GET /{hash}` con la cabecera `Accept: image/png` para una URL existente y activa, el servidor devuelve `200 OK`, `Content-Type: image/png` y una imagen PNG válida con el código QR.
+
+- [ ] **Contenido del QR:** Al leer el código QR generado, se obtiene la URL corta correspondiente al hash solicitado, no la URL original a la que redirige.
+
+- [ ] **Redirección normal:** Al hacer `GET /{hash}` sin solicitar una imagen PNG, el servidor sigue devolviendo `307 Temporary Redirect`, con la URL original en la cabecera `Location`.
+
+- [ ] **URL inexistente:** Si se solicita el QR de un hash que no existe con `Accept: image/png`, el servidor devuelve `404 Not Found` y no genera ningún QR.
+
+- [ ] **URL desactivada:** Si se solicita el QR de una URL desactivada con `Accept: image/png`, el servidor devuelve `410 Gone` y no genera ningún QR.
 
 ### Scale evidence
 
