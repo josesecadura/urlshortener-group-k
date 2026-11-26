@@ -59,17 +59,19 @@ urlshortener:
     provider: redis
 
 ---
-# Externalize events via broker stub
-# Activate: --spring.profiles.active=docker,broker
-# Requires: docker compose --profile broker up
 spring:
   config:
     activate:
       on-profile: broker
-  # TODO: add spring-boot-starter-amqp and configure:
-  # rabbitmq:
-  #   host: rabbit
-  #   port: 5672
-  #   username: guest
-  #   password: guest
-  # See: https://docs.spring.io/spring-modulith/reference/events.html#externalization
+  rabbitmq:
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+
+urlshortener:
+  redirect-cache:
+    broker:
+      exchange: links.cache-invalidation
+      queue: links.cache-invalidation.queue
+      routing-key: cache.invalidate

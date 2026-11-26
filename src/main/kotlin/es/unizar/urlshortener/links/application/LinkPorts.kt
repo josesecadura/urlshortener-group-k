@@ -41,6 +41,11 @@ interface RedirectCache {
     fun evict(hash: String)
 }
 
+@PrimaryPort
+fun interface InvalidateRedirectCache {
+    fun invalidate(hash: String)
+}
+
 @SecondaryPort
 fun interface UrlValidator {
     fun isValid(url: String): Boolean

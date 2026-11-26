@@ -21,6 +21,7 @@ class LinkService(
 ) : CreateShortUrl,
     CreateManagedShortUrl,
     DeactivateManagedShortUrl,
+    InvalidateRedirectCache,
     RedirectShortUrl,
     ExpiredURL {
     @Transactional
@@ -85,6 +86,8 @@ class LinkService(
             events.publishEvent(ShortUrlUpdatedEvent(hash = hash))
         }
     }
+
+    override fun invalidate(hash: String) = cache.evict(hash)
 
     @Transactional
     override fun redirect(hash: String): Redirection {
