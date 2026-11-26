@@ -89,10 +89,11 @@ class LinkService(
     @Transactional
     override fun redirect(hash: String): Redirection {
         // 1) caché; 2) si falla, BD y se guarda en caché para la próxima
+        // Bloqueamos la fila pq otra replica podria desactivar la URL antes de guardarla en Redis
         val shortUrl =
             cache.get(hash)
                 ?: store
-                    .findByHash(hash)
+                    .findByHashForCacheFill(hash)
                     .orElseThrow { LinkNotFoundException(hash) }
                     .also {
                         // Solo guardamos en cache URLs activas y no caducadas
@@ -111,7 +112,7 @@ class LinkService(
             // url caducada, se elimina de BD. Publico evento para avisar de que lo he borrado
             events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = Instant.now()))
             store.delete(hash)
-            // la URL ya no existe: avisa para invalidar la caché
+            // la URL ya no existe: avisa para invalidar la cache
             events.publishEvent(ShortUrlUpdatedEvent(hash = hash))
             throw UrlExpiredException(hash)
         }

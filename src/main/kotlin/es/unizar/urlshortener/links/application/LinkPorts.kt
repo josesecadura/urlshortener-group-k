@@ -12,6 +12,9 @@ interface ShortUrlStore {
 
     fun findByHash(hash: String): Optional<ShortUrl>
 
+    // Buscar URL bloqueando su fila para poder guardarla en cache
+    fun findByHashForCacheFill(hash: String): Optional<ShortUrl>
+
     // Devuelve 1 si se desactiva la URL y 0 si ya estaba desactivada.
     fun deactivate(
         hash: String,

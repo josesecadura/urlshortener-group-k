@@ -1,4 +1,3 @@
-
 package es.unizar.urlshortener.links
 
 import es.unizar.urlshortener.links.application.CreateShortUrl
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.springframework.beans.factory.annotation.Autowired
@@ -80,7 +80,8 @@ class RedirectCacheTests {
         assertEquals(target, redirectShortUrl.redirect(hash).target)
 
         // El repositorio solo se ha consultado una vez
-        verify(store, times(1)).findByHash(hash)
+        verify(store, times(1)).findByHashForCacheFill(hash)
+        verify(store, never()).findByHash(hash)
     }
 
     @Test

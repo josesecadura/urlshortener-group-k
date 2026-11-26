@@ -14,6 +14,8 @@ class JpaShortUrlStore(
 
     override fun findByHash(hash: String): Optional<ShortUrl> = repository.findById(hash).map { it.toDomain() }
 
+    override fun findByHashForCacheFill(hash: String): Optional<ShortUrl> = repository.findByHashForCacheFill(hash).map { it.toDomain() }
+
     override fun deactivate(
         hash: String,
         managementKeyHash: String,
