@@ -1,9 +1,11 @@
 package es.unizar.urlshortener.links.adapters.web
 
 import es.unizar.urlshortener.links.application.CreateShortUrl
+import es.unizar.urlshortener.links.application.GenerateQrCode
 import es.unizar.urlshortener.links.application.InvalidUrlException
 import es.unizar.urlshortener.links.application.LinkNotFoundException
 import es.unizar.urlshortener.links.application.RedirectShortUrl
+import es.unizar.urlshortener.links.application.ResolveShortUrl
 import es.unizar.urlshortener.links.application.UrlDeactivatedException
 import es.unizar.urlshortener.links.application.UrlExpiredException
 import jakarta.validation.constraints.Future
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 import java.net.URI
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 
 data class ShortUrlResponse(
     val url: String,
@@ -31,6 +34,8 @@ data class ShortUrlResponse(
 class LinkController(
     private val createShortUrl: CreateShortUrl,
     private val redirectShortUrl: RedirectShortUrl,
+    private val resolveShortUrl: ResolveShortUrl,
+    private val generateQrCode: GenerateQrCode,
 ) {
     @PostMapping(
         "/api/link",
@@ -43,12 +48,7 @@ class LinkController(
         // se utiliza @Future para asegurarse de que la fecha de expiracion sea posterior al momento de añadir a la BD
     ): ResponseEntity<ShortUrlResponse> {
         val created = createShortUrl.create(url, expirationTime)
-        val location =
-            ServletUriComponentsBuilder
-                .fromCurrentContextPath()
-                .path("/{hash}")
-                .buildAndExpand(created.hash)
-                .toUri()
+        val location = shortUrl(created.hash)
         return ResponseEntity.created(location).body(
             ShortUrlResponse(url = location.toString(), hash = created.hash),
         )
@@ -63,6 +63,27 @@ class LinkController(
         headers.location = URI.create(redirection.target)
         return ResponseEntity(headers, HttpStatus.TEMPORARY_REDIRECT)
     }
+
+    @GetMapping(
+        value = ["/{hash}"],
+        headers = ["Accept=image/png"],
+        produces = [MediaType.IMAGE_PNG_VALUE],
+    )
+    fun qrCode(
+        @PathVariable hash: String,
+    ): CompletableFuture<ResponseEntity<ByteArray>> {
+        resolveShortUrl.resolve(hash)
+        return generateQrCode.generate(shortUrl(hash).toString()).thenApply { png ->
+            ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(png)
+        }
+    }
+
+    private fun shortUrl(hash: String): URI =
+        ServletUriComponentsBuilder
+            .fromCurrentContextPath()
+            .path("/{hash}")
+            .buildAndExpand(hash)
+            .toUri()
 
     @ExceptionHandler(InvalidUrlException::class)
     fun invalidUrl(ex: InvalidUrlException): ResponseEntity<Map<String, String>> =
