@@ -35,7 +35,7 @@ Personal names and ownership belong in your local `TEAM.md` (git-ignored), not i
 | ID | Feature | Owner module | Weight | Event-coupled | ADR |
 | --- | --- | --- | --- | --- | --- |
 | [0004](0004-async-click-ingestion.md) | Async Click Ingestion via Outbox → Broker | `clicks` | 21 | Y | — |
-| [0005](0005-browser-and-platform-detection.md) | Browser and Platform Detection | `analytics` | 8 | Y | — |
+| [0005](0005-browser-and-platform-detection.md) | Browser and Platform Detection | `analytics` | 8 | Y | [0005](../adr/0005-client-stats.md) |
 | [0006](0006-redirect-cache-with-cross-replica.md) | Redirect Cache with Cross-Replica Invalidation | `links` | 21 | Y | [0006](../adr/0006-redirect-cache-invalidation.md) |
 | [0007](0007-qr-code-generator.md) | QR Code Generation | `links` | 8 | N | — |
 | [0008](0008-url-management.md) | URL Management (Deactivation) | `links` | 13 | Y | [0004](../adr/0004-url-management-deactivation.md) |

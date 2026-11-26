@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
@@ -36,6 +37,7 @@ class LinkController(
     private val redirectShortUrl: RedirectShortUrl,
     private val resolveShortUrl: ResolveShortUrl,
     private val generateQrCode: GenerateQrCode,
+    private val clientDetector: ClientDetector,
 ) {
     @PostMapping(
         "/api/link",
@@ -57,8 +59,10 @@ class LinkController(
     @GetMapping("/{hash}")
     fun redirect(
         @PathVariable hash: String,
+        @RequestHeader(name = HttpHeaders.USER_AGENT, required = false) userAgent: String?,
     ): ResponseEntity<Void> {
-        val redirection = redirectShortUrl.redirect(hash)
+        // Se lee la cabecera aquí para que el texto completo no llegue al evento
+        val redirection = redirectShortUrl.redirect(hash, clientDetector.detect(userAgent))
         val headers = HttpHeaders()
         headers.location = URI.create(redirection.target)
         return ResponseEntity(headers, HttpStatus.TEMPORARY_REDIRECT)

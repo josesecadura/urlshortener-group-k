@@ -118,6 +118,7 @@ class ExpirationUrlTests {
         Awaitility.await().atMost(Duration.ofSeconds(10)).untilAsserted {
             assertNull(getLinkStats.findByHash(hash))
         }
+        assertEquals(0, jdbc.queryForObject("select count(*) from client_count where hash = ?", Int::class.java, hash))
     }
 
     private fun createUrl(url: String): String {

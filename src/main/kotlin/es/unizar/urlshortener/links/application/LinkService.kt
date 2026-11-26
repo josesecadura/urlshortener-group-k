@@ -93,9 +93,22 @@ class LinkService(
     override fun invalidate(hash: String) = cache.evict(hash)
 
     @Transactional(noRollbackFor = [UrlExpiredException::class])
-    override fun redirect(hash: String): Redirection {
+    override fun redirect(hash: String): Redirection = redirect(hash, ClientInfo())
+
+    @Transactional(noRollbackFor = [UrlExpiredException::class])
+    override fun redirect(
+        hash: String,
+        client: ClientInfo,
+    ): Redirection {
         val redirection = resolve(hash)
-        events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
+        events.publishEvent(
+            ClickLoggedEvent(
+                hash = hash,
+                occurredAt = Instant.now(),
+                browser = client.browser,
+                platform = client.platform,
+            ),
+        )
         return redirection
     }
 

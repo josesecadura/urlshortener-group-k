@@ -116,6 +116,12 @@ fun interface CreateShortUrl {
     fun create(url: String) = create(url, null)
 }
 
+// Se pasan solo las dos familias que se necesitan para contar los clics
+data class ClientInfo(
+    val browser: String = "Unknown",
+    val platform: String = "Unknown",
+)
+
 @PrimaryPort
 fun interface CreateManagedShortUrl {
     fun createManaged(url: String): ManagedShortUrlCreated
@@ -123,7 +129,13 @@ fun interface CreateManagedShortUrl {
 
 @PrimaryPort
 fun interface RedirectShortUrl {
-    fun redirect(hash: String): Redirection
+    fun redirect(
+        hash: String,
+        client: ClientInfo,
+    ): Redirection
+
+    // Se permite redirigir también desde llamadas que no tienen cabeceras HTTP
+    fun redirect(hash: String): Redirection = redirect(hash, ClientInfo())
 }
 
 @PrimaryPort

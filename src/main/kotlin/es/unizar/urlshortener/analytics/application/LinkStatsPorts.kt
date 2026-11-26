@@ -8,7 +8,6 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import java.time.Duration
 import java.time.Instant
-import java.util.UUID
 
 /** Per-hash click totals (one row per short URL). Not the permanent click log. */
 data class LinkStats(
@@ -18,8 +17,21 @@ data class LinkStats(
     val deactivatedAt: Instant? = null,
 )
 
+// Se devuelve un contador por cada familia que aparece en el enlace
+data class ClientStats(
+    val browsers: Map<String, Long>,
+    val platforms: Map<String, Long>,
+)
+
+@PrimaryPort
+fun interface GetClientStats {
+    fun clientsByHash(hash: String): ClientStats?
+}
+
 @SecondaryPort
 interface LinkStatsStore {
+    fun clientsByHash(hash: String): ClientStats?
+
     fun findByHash(hash: String): LinkStats?
 
     fun markDeactivated(
@@ -29,10 +41,7 @@ interface LinkStatsStore {
 
     fun insertIfAbsent(hash: String)
 
-    fun incrementClicks(
-        hash: String,
-        eventId: UUID,
-    )
+    fun incrementClicks(event: ClickLoggedEvent)
 
     fun deleteProcessedClicksBefore(cutoff: Instant): Int
 

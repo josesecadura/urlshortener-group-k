@@ -1,5 +1,7 @@
 package es.unizar.urlshortener.analytics.adapters.web
 
+import es.unizar.urlshortener.analytics.application.ClientStats
+import es.unizar.urlshortener.analytics.application.GetClientStats
 import es.unizar.urlshortener.analytics.application.GetLinkStats
 import es.unizar.urlshortener.analytics.application.LinkStats
 import org.springframework.http.ResponseEntity
@@ -17,7 +19,17 @@ data class LinkStatsResponse(
 @RestController
 class AnalyticsController(
     private val getLinkStats: GetLinkStats,
+    private val getClientStats: GetClientStats,
 ) {
+    @GetMapping("/api/stats/{hash}/clients")
+    fun clients(
+        @PathVariable hash: String,
+    ): ResponseEntity<ClientStats> {
+        // Si el enlace existe se devuelven los dos mapas, incluso cuando están vacíos
+        val stats = getClientStats.clientsByHash(hash) ?: return notFound().build()
+        return ok(stats)
+    }
+
     @GetMapping("/api/stats/{hash}")
     fun stats(
         @PathVariable hash: String,

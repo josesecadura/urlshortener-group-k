@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.modulith.starter.jdbc)
     implementation(libs.jmolecules.hexagonal)
     implementation(libs.jackson.module.kotlin)
+    implementation(libs.ua.parser)
     implementation(libs.commons.validator)
     implementation(libs.kotlin.logging)
     implementation(libs.zxing.core)

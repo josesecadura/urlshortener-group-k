@@ -17,7 +17,8 @@ class LinkStatsService(
     private val store: LinkStatsStore,
 ) : UpdateLinkStats,
     PruneProcessedClickEvents,
-    GetLinkStats {
+    GetLinkStats,
+    GetClientStats {
     @Transactional
     override fun onCreated(event: ShortUrlCreatedEvent) {
         store.insertIfAbsent(event.hash)
@@ -32,7 +33,8 @@ class LinkStatsService(
 
     @Transactional
     override fun onClick(event: ClickLoggedEvent) {
-        store.incrementClicks(event.hash, event.eventId)
+        // Se actualizan el total y los contadores del cliente en la misma transacción
+        store.incrementClicks(event)
     }
 
     @Transactional
@@ -40,6 +42,9 @@ class LinkStatsService(
         store.deleteProcessedClicksBefore(Instant.now().minus(retention)).also { removed ->
             log.info { "pruned $removed processed click ids older than $retention" }
         }
+
+    @Transactional(readOnly = true)
+    override fun clientsByHash(hash: String): ClientStats? = store.clientsByHash(hash)
 
     @Transactional(readOnly = true)
     override fun findByHash(hash: String): LinkStats? = store.findByHash(hash)

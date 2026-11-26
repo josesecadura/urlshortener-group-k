@@ -10,4 +10,7 @@ data class ClickLoggedEvent(
     val hash: String,
     val occurredAt: Instant = Instant.now(),
     val eventId: UUID = UUID.randomUUID(),
+    // Se admiten también los eventos anteriores, que llegaban sin estos dos campos
+    val browser: String = "Unknown",
+    val platform: String = "Unknown",
 )
