@@ -25,7 +25,7 @@ class ScheduledTasks(
 
     // reenvia los eventos que no han podido ser tratados o que al tratarlos ha saltado excepcion (ej. broker rabbitmq caido),
     // le vuelve a llegar a la funcion y los vuelve a tratar
-    @Scheduled(fixedRate = 60000 * 5) // se ejecuta cada 60s=1min * 5 =5 min
+    @Scheduled(fixedRateString = "\${urlshortener.events.retry-interval:PT5M}")
     @SchedulerLock(name = "incompleteEventsSend", lockAtLeastFor = "PT30S", lockAtMostFor = "PT5M")
     fun incompleteEventsSend() {
         LockAssert.assertLocked()
