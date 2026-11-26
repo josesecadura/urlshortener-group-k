@@ -1,11 +1,10 @@
-
 package es.unizar.urlshortener.links
 
+import com.jayway.jsonpath.JsonPath.read
 import es.unizar.urlshortener.RedisTestContainerConfiguration
 import es.unizar.urlshortener.links.adapters.cache.RedisRedirectCache
 import es.unizar.urlshortener.links.application.CreateManagedShortUrl
 import es.unizar.urlshortener.links.application.DeactivateManagedShortUrl
-import es.unizar.urlshortener.links.application.InvalidManagementKeyException
 import es.unizar.urlshortener.links.application.RedirectCache
 import es.unizar.urlshortener.links.application.RedirectShortUrl
 import es.unizar.urlshortener.links.application.ShortUrlStore
@@ -21,9 +20,20 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.test.context.TestPropertySource
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.time.Duration
 import java.time.Instant
@@ -33,6 +43,7 @@ import java.util.concurrent.TimeUnit
 @Testcontainers(disabledWithoutDocker = true)
 @Import(RedisTestContainerConfiguration::class)
 @SpringBootTest
+@AutoConfigureMockMvc
 @TestPropertySource(
     properties = ["urlshortener.redirect-cache.provider=redis"],
 )
@@ -45,6 +56,9 @@ class RedisRedirectCacheTests {
 
     @Value("\${urlshortener.redirect-cache.ttl}")
     lateinit var ttl: Duration
+
+    @Autowired
+    lateinit var mockMvc: MockMvc
 
     @Autowired
     lateinit var createManaged: CreateManagedShortUrl
@@ -96,22 +110,35 @@ class RedisRedirectCacheTests {
     }
 
     @Test
-    fun `entrada Redis usa el TTL configurado`() {
-        val hash = "redis-ttl-${UUID.randomUUID()}"
+    fun `redirigir una URL guarda su destino en Redis con TTL`() {
+        val target = "https://example.com/${UUID.randomUUID()}"
+
+        // Creamos una URL desde el endpoint
+        val created =
+            mockMvc
+                .perform(
+                    post("/api/link")
+                        .contentType(APPLICATION_FORM_URLENCODED)
+                        .param("url", target),
+                ).andExpect(status().isCreated)
+                .andReturn()
+
+        val hash = read<String>(created.response.contentAsString, "$.hash")
         hashes.add(hash)
+        storedHashes.add(hash)
 
-        // Guardamos una URL sin fecha de caducidad
-        cache.put(
-            ShortUrl(
-                hash = hash,
-                target = "https://example.com/$hash",
-            ),
-        )
+        // Antes de redirigir la URL no debe estar en cache
+        assertNull(cache.get(hash))
 
-        // Consultamos el tiempo que le queda a la entrada en Redis
+        // La primera redireccion devuelve el destino y lo guarda en Redis
+        mockMvc
+            .perform(get("/$hash"))
+            .andExpect(status().isTemporaryRedirect)
+            .andExpect(header().string("Location", target))
+
+        // Comprobamos que Redis guarda el destino con el TTL configurado
+        assertEquals(target, cache.get(hash)?.target)
         val remaining = redis.getExpire("redirect:$hash", TimeUnit.MILLISECONDS)
-
-        // Comprobamos que tiene un TTL positivo y no supera el configurado
         assertTrue(remaining in 1..ttl.toMillis())
     }
 
@@ -178,16 +205,46 @@ class RedisRedirectCacheTests {
         hashes.add(hash)
         storedHashes.add(hash)
 
-        // Llenamos Redis antes de intentar la desactivacion no autorizada
-        assertEquals(target, redirect.redirect(hash).target)
-        assertNotNull(cache.get(hash))
+        // Redirigimos una vez para guardar la URL en Redis
+        mockMvc
+            .perform(get("/$hash"))
+            .andExpect(status().isTemporaryRedirect)
 
-        assertThrows(InvalidManagementKeyException::class.java) {
-            deactivateManaged.deactivate(hash, "clave-incorrecta")
-        }
+        val redisKey = "redirect:$hash"
+        val entryBefore = redis.opsForValue().get(redisKey)
+        assertNotNull(entryBefore)
 
-        // La URL sigue activa, asi que el evento no se publica ni se borra Redis
-        assertNotNull(cache.get(hash))
-        assertEquals(target, redirect.redirect(hash).target)
+        // Intentamos desactivar la URL con una clave incorrecta
+        mockMvc
+            .perform(
+                delete("/api/managed-links/$hash")
+                    .header("Authorization", "Bearer clave-incorrecta"),
+            ).andExpect(status().isForbidden)
+
+        // Comprobamos que la entrada de Redis no se ha eliminado
+        assertEquals(entryBefore, redis.opsForValue().get(redisKey))
+
+        // La URL sigue activa y redirige correctamente
+        mockMvc
+            .perform(get("/$hash"))
+            .andExpect(status().isTemporaryRedirect)
+            .andExpect(header().string("Location", target))
+    }
+
+    @Test
+    fun `hash inexistente devuelve 404 y no se guarda en Redis`() {
+        val hash = "inexistente-${UUID.randomUUID()}"
+        hashes.add(hash)
+
+        // Intentamos redirigir una URL que no existe
+        mockMvc
+            .perform(get("/$hash"))
+            .andExpect(status().isNotFound)
+            .andExpect(header().doesNotExist("Location"))
+            .andExpect(content().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.status").value(404))
+
+        // Comprobamos que no se ha creado ninguna entrada en Redis
+        assertNull(redis.opsForValue().get("redirect:$hash"))
     }
 }

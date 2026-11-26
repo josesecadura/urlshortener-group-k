@@ -69,8 +69,15 @@ class LinkController(
         ResponseEntity.badRequest().body(mapOf("error" to (ex.message ?: "invalid url")))
 
     @ExceptionHandler(LinkNotFoundException::class)
-    fun notFound(ex: LinkNotFoundException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("error" to (ex.message ?: "not found")))
+    fun notFound(ex: LinkNotFoundException): ResponseEntity<ProblemDetail> {
+        val detail = ex.message ?: "not found"
+        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, detail)
+        problem.title = "Not Found"
+        problem.type = URI.create("about:blank")
+        problem.instance = ServletUriComponentsBuilder.fromCurrentRequestUri().build().toUri()
+        problem.setProperty("error", detail)
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem)
+    }
 
     // Respondemos con 410 para diferenciar una URL desactivada de una inexistente
     @ExceptionHandler(UrlDeactivatedException::class)
