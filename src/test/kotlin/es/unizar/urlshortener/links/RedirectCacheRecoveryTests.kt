@@ -4,6 +4,7 @@ import es.unizar.urlshortener.PostgresContainer
 import es.unizar.urlshortener.RabbitMqContainer
 import es.unizar.urlshortener.RedisTestContainerConfiguration
 import es.unizar.urlshortener.links.application.CreateManagedShortUrl
+import es.unizar.urlshortener.links.application.ExpiredURL
 import es.unizar.urlshortener.links.application.RedirectCache
 import es.unizar.urlshortener.links.application.ShortUrlStore
 import es.unizar.urlshortener.links.domain.ShortUrl
@@ -23,12 +24,14 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.ResultMatcher
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.rabbitmq.RabbitMQContainer
 import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 @Testcontainers(disabledWithoutDocker = true)
@@ -50,6 +53,9 @@ class RedirectCacheRecoveryTests {
     lateinit var createManaged: CreateManagedShortUrl
 
     @Autowired
+    lateinit var expiredURL: ExpiredURL
+
+    @Autowired
     lateinit var store: ShortUrlStore
 
     @Autowired
@@ -69,15 +75,11 @@ class RedirectCacheRecoveryTests {
 
         try {
             val original = store.findByHash(hash).orElseThrow()
-            cache.put(original)
-            assertEquals(original.target, cache.get(hash)?.target)
-
-            val publicacionId = desactivarConRabbitCaido(original, link.managementKey)
-
-            await().atMost(Duration.ofSeconds(75)).untilAsserted {
-                val estado = jdbc.queryForObject("select status from event_publication where id = ?", String::class.java, publicacionId)
-                assertEquals("COMPLETED", estado)
-                assertNull(cache.get(hash))
+            comprobarRecuperacion(original, status().isGone) {
+                mockMvc
+                    .perform(delete("/api/managed-links/$hash").header(AUTHORIZATION, "Bearer ${link.managementKey}"))
+                    .andExpect(status().isNoContent)
+                assertNotNull(store.findByHash(hash).orElseThrow().deactivatedAt)
             }
         } finally {
             cache.evict(hash)
@@ -85,29 +87,64 @@ class RedirectCacheRecoveryTests {
         }
     }
 
-    private fun desactivarConRabbitCaido(
+    @Test
+    @Timeout(120)
+    fun `el barrido borra la URL y su invalidacion se recupera cuando vuelve RabbitMQ`() {
+        val hash = createManaged.createManaged("https://example.com/recuperacion-borrado").hash
+
+        try {
+            val original = store.findByHash(hash).orElseThrow()
+            comprobarRecuperacion(original, status().isNotFound) {
+                // Marcamos la fila como caducada dejando la entrada de Redis con su TTL original.
+                val updated =
+                    jdbc.update("update short_url set expiration_time = current_timestamp - interval '1 minute' where hash = ?", hash)
+                assertEquals(1, updated)
+                assertEquals(1, expiredURL.deleteExpiredURL(Instant.now()))
+                assertTrue(store.findByHash(hash).isEmpty)
+            }
+        } finally {
+            cache.evict(hash)
+            store.delete(hash)
+        }
+    }
+
+    private fun comprobarRecuperacion(
         original: ShortUrl,
-        managementKey: String,
-    ): UUID {
+        estadoHttp: ResultMatcher,
+        invalidar: () -> Unit,
+    ) {
         val hash = original.hash
+        cache.put(original)
+        assertEquals(original.target, cache.get(hash)?.target)
+
+        val publicacionId =
+            conRabbitCaido {
+                invalidar()
+                assertNull(cache.get(hash))
+                mockMvc.perform(get("/$hash")).andExpect(estadoHttp)
+
+                val id = await().atMost(Duration.ofSeconds(15)).until({ publicacionFallida(hash) }, { it != null })
+
+                // Recuperamos la entrada antigua para comprobar que esta vez la borra el consumidor.
+                cache.put(original)
+                assertEquals(original.target, cache.get(hash)?.target)
+                requireNotNull(id)
+            }
+
+        await().atMost(Duration.ofSeconds(75)).untilAsserted {
+            val estado = jdbc.queryForObject("select status from event_publication where id = ?", String::class.java, publicacionId)
+            assertEquals("COMPLETED", estado)
+            assertNull(cache.get(hash))
+        }
+        mockMvc.perform(get("/$hash")).andExpect(estadoHttp)
+    }
+
+    private fun conRabbitCaido(accion: () -> UUID): UUID {
         assertTrue(rabbitEscucha(), "RabbitMQ debe estar disponible antes de pararlo")
         ejecutarRabbit("stop_app")
         try {
             await().atMost(Duration.ofSeconds(10)).until { !rabbitEscucha() }
-
-            mockMvc
-                .perform(delete("/api/managed-links/$hash").header(AUTHORIZATION, "Bearer $managementKey"))
-                .andExpect(status().isNoContent)
-            assertNotNull(store.findByHash(hash).orElseThrow().deactivatedAt)
-            assertNull(cache.get(hash))
-            mockMvc.perform(get("/$hash")).andExpect(status().isGone)
-
-            val id = await().atMost(Duration.ofSeconds(15)).until({ publicacionFallida(hash) }, { it != null })
-
-            // Recuperamos la entrada antigua para comprobar que esta vez la borra el consumidor.
-            cache.put(original)
-            assertEquals(original.target, cache.get(hash)?.target)
-            return requireNotNull(id)
+            return accion()
         } finally {
             ejecutarRabbit("start_app")
         }
