@@ -9,6 +9,7 @@ jmolecules = "2025.0.2"
 detekt = "2.0.0-alpha.6"
 ktlint = "12.2.0"
 shedlock = "7.10.1"
+zxing = "3.5.3"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -50,3 +51,5 @@ spring-rabbit-test={module="org.springframework.amqp:spring-rabbit-test"}
 spring-boot-starter-amqp={module="org.springframework.boot:spring-boot-starter-amqp"}
 spring-boot-rest-client={module="org.springframework.boot:spring-boot-restclient"}
 spring-boot-rest-test-client={module="org.springframework.boot:spring-boot-resttestclient"}
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+zxing-javase = { module = "com.google.zxing:javase", version.ref = "zxing" }

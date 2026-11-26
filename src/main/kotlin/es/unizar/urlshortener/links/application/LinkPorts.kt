@@ -5,6 +5,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import java.time.Instant
 import java.util.Optional
+import java.util.concurrent.CompletableFuture
 
 @SecondaryPort
 interface ShortUrlStore {
@@ -54,6 +55,11 @@ fun interface UrlValidator {
 @SecondaryPort
 fun interface ShortCodeSource {
     fun next(): String
+}
+
+@SecondaryPort
+fun interface QrCodeEncoder {
+    fun encode(content: String): ByteArray
 }
 
 data class CreatedShortUrl(
@@ -118,6 +124,16 @@ fun interface CreateManagedShortUrl {
 @PrimaryPort
 fun interface RedirectShortUrl {
     fun redirect(hash: String): Redirection
+}
+
+@PrimaryPort
+fun interface ResolveShortUrl {
+    fun resolve(hash: String): Redirection
+}
+
+@PrimaryPort
+fun interface GenerateQrCode {
+    fun generate(shortUrl: String): CompletableFuture<ByteArray>
 }
 
 @PrimaryPort

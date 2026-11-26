@@ -23,6 +23,7 @@ class LinkService(
     DeactivateManagedShortUrl,
     InvalidateRedirectCache,
     RedirectShortUrl,
+    ResolveShortUrl,
     ExpiredURL {
     @Transactional
     override fun create(
@@ -91,6 +92,13 @@ class LinkService(
 
     @Transactional
     override fun redirect(hash: String): Redirection {
+        val redirection = resolve(hash)
+        events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
+        return redirection
+    }
+
+    @Transactional
+    override fun resolve(hash: String): Redirection {
         // 1) caché; 2) si falla, BD y se guarda en caché para la próxima
         // Bloqueamos la fila pq otra replica podria desactivar la URL antes de guardarla en Redis
         val shortUrl =
@@ -119,7 +127,6 @@ class LinkService(
             events.publishEvent(ShortUrlUpdatedEvent(hash = hash))
             throw UrlExpiredException(hash)
         }
-        events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
         return Redirection(target = shortUrl.target)
     }
 

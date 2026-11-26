@@ -43,6 +43,8 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.commons.validator)
     implementation(libs.kotlin.logging)
+    implementation(libs.zxing.core)
+    implementation(libs.zxing.javase)
     // Redis para 006
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     runtimeOnly(libs.kotlin.reflect)
