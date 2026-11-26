@@ -4,5 +4,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY build/libs/urlshortener.jar app.jar
+ENV SPRING_PROFILES_ACTIVE=docker,broker
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar", "--spring.profiles.active=docker"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -4,15 +4,18 @@
 
 ## Product (minimum expected)
 
-**Graded deliverable:** Boot jar(s) **plus** this Compose stack (Postgres + 2 app replicas + LB) — not “jar on localhost only.”
+The graded deliverable includes the Boot jar and the Compose stack with PostgreSQL, Redis, RabbitMQ, two app replicas and Nginx.
 
-Day-to-day coding uses `./gradlew bootRun` (in-memory HSQLDB). Demo and grading use Compose:
+Day-to-day coding uses `./gradlew bootRun` (in-memory HSQLDB). For demos and grading, start the full stack with the following commands.
 
-| Layer | Command |
-| --- | --- |
-| Product | `docker compose up --build` → LB `http://localhost:8080` |
-| Load (same project) | `docker compose --profile load run --rm k6` or host `scripts/load.k6.js` |
-| Optional broker stub | `docker compose --profile broker up` |
+```bash
+./gradlew bootJar
+docker compose up --build
+```
+
+Nginx serves the app at `http://localhost:8080`. Both replicas use the `docker,broker` Spring profiles by default. Set `SPRING_PROFILES_ACTIVE` before starting Compose to override them.
+
+Run the load test with `docker compose --profile load run --rm k6` or run `scripts/load.k6.js` from the host.
 
 ## Provided vs grown
 
@@ -33,7 +36,7 @@ Day-to-day coding uses `./gradlew bootRun` (in-memory HSQLDB). Demo and grading 
 - New feature cards from [`0004-…`](docs/features/README.md). Weights **5 · 8 · 13 · 21** (ExpectedLevel 1–4). **Σ = 84**. **≥ 4** grown features (one per member). **≥ 2** event-coupled. Seed cards weigh 0 and are ignored in those counts.
 - **Event-coupled Y** means the feature publishes or consumes a domain event. Reaching Level 3 (weight **13**) or Level 4 (weight **21**) needs a **new** event type. Reusing `ShortUrlCreatedEvent` or `ClickLoggedEvent` does not reach those levels. A card may still say **N**; that delivery scores as Level 2.
 - Code in owner modules (`links` / `clicks` / `analytics` or a new module) — keep hexagon + `ApplicationModules.verify()` green.
-- Weight **21** (Level 4) needs an external broker. `docker compose --profile broker up` only starts the stub; the apps are not wired to it. Students wire externalization.
+- Weight **21** (Level 4) needs an external broker. The Compose stack starts RabbitMQ and enables the application adapters by default.
 - ADRs under [`docs/adr/`](docs/adr/README.md) when a choice locks a module, the broker, or a library ([`0000-TEMPLATE.md`](docs/adr/0000-TEMPLATE.md); seed [`0001`](docs/adr/0001-modulith-and-hexagon.md)).
 - Technologies beyond baseline HTTP, in distinct grown features: Call-Return, Event-Based, and Data Flow. Modulith events and the broker count toward architecture, not this slice. Web UI is not graded.
 - Defence packet: filled feature cards, ADR log, and a live Compose demo (create, redirect, stats).
@@ -88,7 +91,7 @@ Defence packet: list ADRs + the command/test that proves each decision.
 - `links.ShortUrlCreatedEvent` (published by `links`) → `analytics` creates zeroed `LinkStats`
 - `clicks.ClickLoggedEvent` (type in `clicks`; published by `links` on redirect) → `clicks` appends a log row; `analytics` increments `LinkStats`
 
-In-process events do **not** cross replicas. The seed `--profile broker` only starts the broker; it does not externalise events.
+With RabbitMQ enabled, click ingestion (0004) and redirect cache invalidation (0006) send events through the broker.
 
 ```mermaid
 flowchart LR
@@ -125,7 +128,8 @@ http GET  localhost:8080/<hash>    --follow
 http GET  localhost:8080/api/stats/<hash>
 
 # 5. Stop bootRun (same port), then bring up the product stack
-docker compose up --build   # Postgres + 2 replicas + LB → http://localhost:8080
+./gradlew bootJar
+docker compose up --build   # Full stack via Nginx at http://localhost:8080
 ```
 
 Once the stack is up and you can create, redirect, and fetch stats, you are ready to fill your agreement.
@@ -139,7 +143,7 @@ Full rules: [Group Project](https://moodle.unizar.es/add/course/section.php?id=1
 | **5** | 1 | Synchronous Spring MVC |
 | **8** | 2 | Async threads, coroutines, or `@Async` |
 | **13** | 3 | In-process Modulith events (`@ApplicationModuleListener`). A **new** event type is required to reach this level; the card may still say N |
-| **21** | 4 | External broker. A **new** event type is required to reach this level. `--profile broker` only starts the stub |
+| **21** | 4 | External broker. A **new** event type is required to reach this level |
 
 1. **Feature cards**: copy [`docs/features/0000-TEMPLATE.md`](docs/features/0000-TEMPLATE.md) → `0004-….md`. Paste the catalogue entry into `## Decision` and choose a weight. Leave `## Later` empty. No personal names.
 2. **Cover sheet**: fill [`AGREEMENT.md`](AGREEMENT.md) — grown feature rows (owner module, weight, event-coupled) and budget totals (Σ = 84, grown ≥ 4, event-coupled ≥ 2). No personal names.
