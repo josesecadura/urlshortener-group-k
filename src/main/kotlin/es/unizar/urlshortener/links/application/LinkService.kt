@@ -6,6 +6,7 @@ import es.unizar.urlshortener.links.ShortUrlDeactivatedEvent
 import es.unizar.urlshortener.links.ShortUrlUpdatedEvent
 import es.unizar.urlshortener.links.UrlExpirationEvent
 import es.unizar.urlshortener.links.domain.ShortUrl
+import jakarta.validation.constraints.Future
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -28,7 +29,8 @@ class LinkService(
     @Transactional
     override fun create(
         url: String,
-        expirationTime: Instant?,
+        @Future expirationTime: Instant?,
+        // se indica con Future para que solo se admita si la fecha es futura, si se introduce una fecha antigua devuelve 400 Bad Request
     ): CreatedShortUrl {
         val trimmed = url.trim()
         require(trimmed.isNotEmpty()) { "url must not be blank" }
@@ -90,14 +92,14 @@ class LinkService(
 
     override fun invalidate(hash: String) = cache.evict(hash)
 
-    @Transactional
+    @Transactional(noRollbackFor = [UrlExpiredException::class])
     override fun redirect(hash: String): Redirection {
         val redirection = resolve(hash)
         events.publishEvent(ClickLoggedEvent(hash = hash, occurredAt = Instant.now()))
         return redirection
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = [UrlExpiredException::class])
     override fun resolve(hash: String): Redirection {
         // 1) caché; 2) si falla, BD y se guarda en caché para la próxima
         // Bloqueamos la fila pq otra replica podria desactivar la URL antes de guardarla en Redis
@@ -119,9 +121,10 @@ class LinkService(
         if (shortUrl.deactivatedAt != null) {
             throw UrlDeactivatedException(hash)
         }
-        if (shortUrl.expirationTime != null && Instant.now().isAfter(shortUrl.expirationTime)) {
+        val expirationTime = shortUrl.expirationTime
+        if (expirationTime != null && Instant.now().isAfter(expirationTime)) {
             // url caducada, se elimina de BD. Publico evento para avisar de que lo he borrado
-            events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = Instant.now()))
+            events.publishEvent(UrlExpirationEvent(hash = hash, expirationTime = expirationTime))
             store.delete(hash)
             // la URL ya no existe: avisa para invalidar la cache
             events.publishEvent(ShortUrlUpdatedEvent(hash = hash))
@@ -138,6 +141,6 @@ class LinkService(
             events.publishEvent(UrlExpirationEvent(hash = h, expirationTime = now))
             events.publishEvent(ShortUrlUpdatedEvent(hash = h))
         }
-        return store.deleteExpiredURLPeriodic(Instant.now())
+        return store.deleteExpiredURLPeriodic(now)
     }
 }

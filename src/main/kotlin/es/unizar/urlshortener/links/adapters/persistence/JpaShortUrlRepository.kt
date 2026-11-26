@@ -38,7 +38,7 @@ interface JpaShortUrlRepository : JpaRepository<ShortUrlEntity, String> {
     @Query("DELETE FROM ShortUrlEntity s WHERE s.expirationTime < :now")
     fun deleteExpiredURL(
         @Param("now") now: Instant,
-    ): Int // devuelve el numero de filas borradas
+    ): Int // elimina de la BD las url cuya fecha de expiracion es anterior a la fecha actual (han expirado)
 
     @Query("SELECT s.hash FROM ShortUrlEntity s WHERE s.expirationTime < :now")
     fun getExpiredURL(

@@ -111,6 +111,5 @@ class LinkController(
     }
 
     @ExceptionHandler(UrlExpiredException::class)
-    fun expiredUrl(ex: UrlExpiredException): ResponseEntity<Map<String, String>> =
-        ResponseEntity.status(HttpStatus.GONE).body(mapOf("error" to (ex.message ?: "expired url")))
+    fun expiredUrl(): ResponseEntity<Void> = ResponseEntity.status(HttpStatus.GONE).build()
 }
