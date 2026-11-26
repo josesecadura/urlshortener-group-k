@@ -50,6 +50,8 @@ y `410` que ya expone `links`.
 
 ## Evidencias (defensa)
 
-- [ ] Código y enlace de la ficha 0007
-- [ ] Pruebas de aceptación de QR, `./gradlew check` y `./gradlew test --tests es.unizar.urlshortener.ModularityTests`
-- [ ] Demostración con `docker compose up --build` y una petición PNG a través del balanceador
+- [x] Código: `links.application.QrCodeService`, `links.adapters.qr.ZxingQrCodeEncoder` y
+  `links.adapters.web.LinkController`; ficha [`0007`](../features/0007-qr-code-generator.md).
+- [x] Pruebas: `QrCodeFlowTests`, `QrCodeServiceTests`, `ModularityTests` y `./gradlew check`.
+- [x] Demostración: `./gradlew bootJar --rerun-tasks`, `docker compose up --build` y
+  `GET /1001` con `Accept: image/png` a través de Nginx devolvió un PNG `200` de 256 × 256.

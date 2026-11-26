@@ -22,35 +22,42 @@ Generates a QR code PNG (or SVG) for any shortened URL on demand via content neg
 
 ### Acceptance criteria
 
-- [ ] **Generación del QR:** Al hacer `GET /{hash}` con la cabecera `Accept: image/png` para una URL existente y activa, el servidor devuelve `200 OK`, `Content-Type: image/png` y una imagen PNG válida con el código QR.
+- [x] **Generación del QR:** Al hacer `GET /{hash}` con la cabecera `Accept: image/png` para una URL existente y activa, el servidor devuelve `200 OK`, `Content-Type: image/png` y una imagen PNG válida con el código QR.
 
-- [ ] **Contenido del QR:** Al leer el código QR generado, se obtiene la URL corta correspondiente al hash solicitado, no la URL original a la que redirige.
+- [x] **Contenido del QR:** Al leer el código QR generado, se obtiene la URL corta correspondiente al hash solicitado, no la URL original a la que redirige.
 
-- [ ] **Redirección normal:** Al hacer `GET /{hash}` sin solicitar una imagen PNG, el servidor sigue devolviendo `307 Temporary Redirect`, con la URL original en la cabecera `Location`.
+- [x] **Redirección normal:** Al hacer `GET /{hash}` sin solicitar una imagen PNG, el servidor sigue devolviendo `307 Temporary Redirect`, con la URL original en la cabecera `Location`.
 
-- [ ] **URL inexistente:** Si se solicita el QR de un hash que no existe con `Accept: image/png`, el servidor devuelve `404 Not Found` y no genera ningún QR.
+- [x] **URL inexistente:** Si se solicita el QR de un hash que no existe con `Accept: image/png`, el servidor devuelve `404 Not Found` y no genera ningún QR.
 
-- [ ] **URL desactivada:** Si se solicita el QR de una URL desactivada con `Accept: image/png`, el servidor devuelve `410 Gone` y no genera ningún QR.
+- [x] **URL desactivada:** Si se solicita el QR de una URL desactivada con `Accept: image/png`, el servidor devuelve `410 Gone` y no genera ningún QR.
 
 ### Scale evidence
 
-Fill this section with the evidence of the scalability of the feature.
+La generación se ejecuta con `@Async` y devuelve un `CompletableFuture`, por lo que el hilo MVC
+no codifica la imagen. `QrCodeFlowTests` comprueba que la solicitud PNG inicia procesamiento
+asíncrono con `request().asyncStarted()`.
+
+No se guarda ningún PNG ni estado de QR en memoria, Redis o PostgreSQL: cada réplica puede
+generar la misma representación de forma independiente. Se arrancó el producto con
+`./gradlew bootJar --rerun-tasks` y `docker compose up --build`. Las dos réplicas, Redis,
+RabbitMQ, PostgreSQL y Nginx quedaron sanos. A través del balanceador se creó el hash `1001` y
+`GET /1001` con `Accept: image/png` devolvió `200`, `Content-Type: image/png` y un PNG de
+256 × 256 píxeles. Las peticiones sin `Accept`, con `Accept: */*` y con `Accept: text/html`
+devolvieron `307`.
 
 ### Qualities
 
-Fill **Assessed** with the grade you claim; **How to test** must falsify that number if it failed.
-
 | Quality | Assessed | How to test |
 | --- | --- | --- |
-| **Correctness** | 0 \| 5 | Acceptance tests for this feature |
-| **Scalability** | 0–3.5 | Scale evidence above. Not `ModularityTests`. |
-| **Engineering** | 0 \| 0.75 \| 1.5 | Hard gates: AI disclosure + `./gradlew check`. Then ADR + `ModularityTests`: both → **1.5**, one → **0.75**. |
+| **Correctness** | 5 | `QrCodeFlowTests` cubre los cinco criterios y decodifica el PNG; `QrCodeServiceTests` verifica el adaptador ZXing. |
+| **Scalability** | 3.5 | `@Async` desplaza la codificación y no existe estado de QR por réplica; la evidencia de Compose prueba el producto con dos réplicas. |
+| **Engineering** | 1.5 | ADR 0007, `ModularityTests` y `./gradlew check` en verde; declaración de IA incluida. |
 
-**Indicative total:** _ / 10
+**Indicative total:** 10 / 10
 
 ### AI disclosure
 
-- **Tools / skills:** …
-- **Used for:** …
-- **Human-reviewed:** …
-- Or: **No AI assistance** was used for this feature.
+- **Tools / skills:** OpenAI Codex y ChatGPT.
+- **Used for:** Análisis de requisitos, propuesta e implementación de la generación QR, diseño de pruebas y revisión de código y documentación.
+- **Human-reviewed:** Se revisaron los cambios, los criterios de aceptación, la selección del handler HTTP y los resultados de Gradle y Docker Compose.
