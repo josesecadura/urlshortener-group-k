@@ -20,17 +20,25 @@ Caches hash → target in a shared store. When a URL is deactivated or deleted, 
 
 - **ADR:** [0006-redirect-cache-invalidation](../adr/0006-redirect-cache-invalidation.md)
 
-### Criterios de aceptación
+### Criterios de aceptación corregidos por el profesor
 
-- [x] **Caché en Redis con TTL:** Al crear una URL acortada y realizar una redirección, se almacena en Redis la asociación `hash → URL original` con un tiempo de expiración (TTL). La redirección devuelve el código HTTP `307` y la cabecera `Location` correcta.
+#### Success
 
-- [x] **Invalidación entre réplicas:** Cuando una URL almacenada en caché se desactiva o elimina, su entrada se invalida en todas las réplicas (`app1` y `app2`). Las solicitudes posteriores dejan de devolver `307` y responden con `410 Gone` si está desactivada o `404 Not Found` si ha sido eliminada.
+- [X] `GET /{hash}` for an unknown hash returns **404** `ProblemDetails`, and that 404 is not cached
+- [X] If that hash is created afterwards, the first `GET /{hash}` returns **307** with `Location` = target
+- [X] `GET /{hash}` for an active hash returns **307** with `Location` = target
+- [X] A later `GET /{hash}` of such active hash returns **307** with the `Location` cached
 
-- [x] **URL inexistente:** Si se solicita la redirección de un hash inexistente, la aplicación devuelve `404 Not Found` y no almacena ninguna entrada para ese hash en Redis.
+#### Rejection
 
-- [x] **Desactivación no autorizada:** Si se intenta desactivar una URL sin autorización, la operación es rechazada y la entrada de caché permanece válida. La URL continúa redirigiendo correctamente con `307`.
+- [X] After the action stops the redirect, `GET /{hash}` return **410** Problem Detail without waiting for the cached entry's TTL to expire.
+- [X] While the link is stopped, the response for `GET /{hash}` is **410** Problem Detail
+- [X] After the link is deleted, the response for `GET /{hash}` is **404** Problem Detail
 
-- [x] **Recuperación ante fallos del broker:** Si el broker de mensajería deja de estar disponible durante una desactivación o eliminación, el evento de invalidación queda pendiente sin perderse. Cuando el broker vuelve a funcionar, el evento se procesa y la caché queda invalidada correctamente.
+#### Both replicas
+
+- [X] The active **307**, and the stopped **410**, hold the same response when the load balancer sends the `GET /{hash}` to any replica. A broker outage does not delay stopping a redirect (no stale **307**).
+
 
 ### Scale evidence
 

@@ -20,17 +20,28 @@ Generates a QR code PNG (or SVG) for any shortened URL on demand via content neg
 
 - **ADR:** [0007 · Generación asíncrona de códigos QR](../adr/0007-qr-code-generation.md)
 
-### Acceptance criteria
+### Criterios de aceptación corregidos por el profesor
 
-- [x] **Generación del QR:** Al hacer `GET /{hash}` con la cabecera `Accept: image/png` para una URL existente y activa, el servidor devuelve `200 OK`, `Content-Type: image/png` y una imagen PNG válida con el código QR.
+> **Corrección pendiente para la entrega final.** Tengo que corregir lo indicado en criterios de aceptación 
 
-- [x] **Contenido del QR:** Al leer el código QR generado, se obtiene la URL corta correspondiente al hash solicitado, no la URL original a la que redirige.
+#### Success
 
-- [x] **Redirección normal:** Al hacer `GET /{hash}` sin solicitar una imagen PNG, el servidor sigue devolviendo `307 Temporary Redirect`, con la URL original en la cabecera `Location`.
+- [ ] `GET /api/link/{hash}/qr` with `Accept: image/png` returns **200** and `Content-Type: image/png`
+- [ ] `GET /api/link/{hash}/qr` with `Accept: image/*` returns **200** and `Content-Type: image/png`
+- [ ] `GET /api/link/{hash}/qr` with `Accept: */*` returns **200** and `Content-Type: image/png`
+- [ ] `GET /api/link/{hash}/qr` with no `Accept` returns **200** and `Content-Type: image/png`
+- [ ] The image decodes to the absolute short URL in the `Location` header of `POST /api/link`, not the target
+- [X] That short URL resolves to **307** with `Location` = target
 
-- [x] **URL inexistente:** Si se solicita el QR de un hash que no existe con `Accept: image/png`, el servidor devuelve `404 Not Found` y no genera ningún QR.
+#### Rejection
 
-- [x] **URL desactivada:** Si se solicita el QR de una URL desactivada con `Accept: image/png`, el servidor devuelve `410 Gone` y no genera ningún QR.
+- [ ] An unknown hash returns **404** Problem Detail and no image
+- [ ] An `Accept` the endpoint cannot produce returns **406** Problem Detail
+- [ ] An expired or deactivated hash returns **410** Problem Detail and no image
+
+#### Both replicas
+
+- [ ] A QR request that the load balancer sends to either replica returns a PNG of the same short URL
 
 ### Scale evidence
 
