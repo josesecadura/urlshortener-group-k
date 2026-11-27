@@ -49,6 +49,8 @@ class LinkStatsService(
     @Transactional(readOnly = true)
     override fun findByHash(hash: String): LinkStats? = store.findByHash(hash)
 
+    // cuando llega evento de url caducada, se borra la fila con las estadisticas de las url,
+    // esa url ya no existe (se ha borrado de la BD de links)
     @Transactional
     override fun onDelete(event: UrlExpirationEvent) {
         store.deleteByID(event.hash)
