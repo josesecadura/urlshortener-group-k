@@ -22,8 +22,12 @@ Forwards `ClickLoggedEvent` to an external broker (`--profile broker`). The type
 
 ### Acceptance criteria
 
-- [ ] …
-- [ ] …
+- [ ] GET /$hash con hash siendo el correspondiente a una url valida responde 307 Temporary Redirect y
+- [ ] GET /$hash publica en broker mensaje ClickLoggedIngestionEvent para que de forma asincrona se registre el evento e incremente el contador de clicks en el exchange clicks.ingest, con el hash y el eventId del click.
+- [ ] El consumidor es idempotente, por cada click (lleva asociado ID), solo se registra en BD 1 vez, aunque el evento llegue mas veces.
+- [ ] GET /$hash con hash siendo el correspondiente a una url valida, cuando el broker esta caido, responde 307 Temporary Redirect
+- [ ] Con el broker caido, el click no se pierde, se almacena en Outbox transaccional, quedando como publicacion pendiente. El scheduler realiza periodicamente reintentos de entrega de estos mensajes
+- [ ] GET /$hash con hash siendo el correspondiente a una url no existente, responde 404 Not Found y no publica ningun mensaje
 
 ### Scale evidence
 
