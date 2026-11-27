@@ -22,12 +22,12 @@ Forwards `ClickLoggedEvent` to an external broker (`--profile broker`). The type
 
 ### Acceptance criteria
 
-- [ ] GET /$hash con hash siendo el correspondiente a una url valida responde 307 Temporary Redirect y
-- [ ] GET /$hash publica en broker mensaje ClickLoggedIngestionEvent para que de forma asincrona se registre el evento e incremente el contador de clicks en el exchange clicks.ingest, con el hash y el eventId del click.
-- [ ] El consumidor es idempotente, por cada click (lleva asociado ID), solo se registra en BD 1 vez, aunque el evento llegue mas veces.
-- [ ] GET /$hash con hash siendo el correspondiente a una url valida, cuando el broker esta caido, responde 307 Temporary Redirect
-- [ ] Con el broker caido, el click no se pierde, se almacena en Outbox transaccional, quedando como publicacion pendiente. El scheduler realiza periodicamente reintentos de entrega de estos mensajes
-- [ ] GET /$hash con hash siendo el correspondiente a una url no existente, responde 404 Not Found y no publica ningun mensaje
+- [x] GET /$hash con hash siendo el correspondiente a una url valida responde 307 Temporary Redirect y
+- [x] GET /$hash publica en broker mensaje ClickLoggedIngestionEvent para que de forma asincrona se registre el evento e incremente el contador de clicks en el exchange clicks.ingest, con el hash y el eventId del click.
+- [x] El consumidor es idempotente, por cada click (lleva asociado ID), solo se registra en BD 1 vez, aunque el evento llegue mas veces.
+- [x] GET /$hash con hash siendo el correspondiente a una url valida, cuando el broker esta caido, responde 307 Temporary Redirect
+- [x] Con el broker caido, el click no se pierde, se almacena en Outbox transaccional, quedando como publicacion pendiente. El scheduler realiza periodicamente reintentos de entrega de estos mensajes
+- [x] GET /$hash con hash siendo el correspondiente a una url no existente, responde 404 Not Found y no publica ningun mensaje
 
 ### Scale evidence
 
@@ -39,15 +39,15 @@ Fill **Assessed** with the grade you claim; **How to test** must falsify that nu
 
 | Quality | Assessed | How to test |
 | --- | --- | --- |
-| **Correctness** | 0 \| 5 | Acceptance tests for this feature |
-| **Scalability** | 0–3.5 | Scale evidence above. Not `ModularityTests`. |
-| **Engineering** | 0 \| 0.75 \| 1.5 | Hard gates: AI disclosure + `./gradlew check`. Then ADR + `ModularityTests`: both → **1.5**, one → **0.75**. |
+| **Correctness** | 5 | Se ha cumplido con todos los criterios de aceptacion propuestos. Se publica mensaje en broker correctamente y se lee por el modulo de clicks que lleva el conteo. Si el broker no responde se queda pendiente y cuando vuelve a funcionar se envia |
+| **Scalability** | 2 | Se ha probado 100 peticiones a la vez. Falta completar mas pruebas |
+| **Engineering** | 1.5 | Se utiliza ./gradlew check para ejecutar los tests propuestos y todos se ejecutan correctamente. Modularity tests superados |
 
-**Indicative total:** _ / 10
+**Indicative total:** 8.5 / 10
 
 ### AI disclosure
 
-- **Tools / skills:** …
-- **Used for:** …
-- **Human-reviewed:** …
-- Or: **No AI assistance** was used for this feature.
+- **Tools / skills:** Claude
+- **Used for:** Se ha utilizado para entender el funcionamiento y como interatuar con rabbitmq, asi como apoyo para entender la documentacion consultada sobre rabbitmq y como integrarlo en spring
+- **Human-reviewed:** Se ha revisado los cambios y solucion de problemas propuestos con lo especificado en la documentacion de spring consultada y se ha comprobado si era correcto. No se ha utilizado para generar codigo. Se ha comprobado el funcionamiento realizando distintos tests que probaban las funcionalidades
+

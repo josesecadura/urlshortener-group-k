@@ -22,13 +22,13 @@ Users optionally set an expiration date/time at creation. Accesses after expiry 
 
 ### Acceptance criteria
 
-- [ ] POST /api/link con una fecha de caducidad antigua responde 400 (BadRequest error)
-- [ ] POST /api/link con una fecha de caducidad posterior a la fecha actual responde 201, incluye la cabecera Location y el JSON contiene hash.
-- [ ] GET /$hash con hash siendo el correspondiente a una url caducada (que todavia no se ha eliminado de la BD por el scheduler) responde 410 Gone y no existe cabecera Location
-- [ ] GET /$hash con hash siendo el correspondiente a una url valida (no caducada)responde 307 Temporary Redirect
-- [ ] GET /$hash con hash siendo el correspondiente a una url inexistente devuelve 404 Not Found
-- [ ] GET /api/stats/$hash con hash siendo el correspondiente a una url valida (no caducada) devuelve 200 OK con LinkStatsResponse(hash, totalClicks)
-- [ ] GET /api/stats/$hash con hash siendo el correspondiente a una url inexistente devuelve 404 Not Found
+- [x] POST /api/link con una fecha de caducidad antigua responde 400 (BadRequest error)
+- [x] POST /api/link con una fecha de caducidad posterior a la fecha actual responde 201, incluye la cabecera Location y el JSON contiene hash.
+- [x] GET /$hash con hash siendo el correspondiente a una url caducada (que todavia no se ha eliminado de la BD por el scheduler) responde 410 Gone y no existe cabecera Location
+- [x] GET /$hash con hash siendo el correspondiente a una url valida (no caducada)responde 307 Temporary Redirect
+- [x] GET /$hash con hash siendo el correspondiente a una url inexistente devuelve 404 Not Found
+- [x] GET /api/stats/$hash con hash siendo el correspondiente a una url valida (no caducada) devuelve 200 OK con LinkStatsResponse(hash, totalClicks)
+- [x] GET /api/stats/$hash con hash siendo el correspondiente a una url inexistente devuelve 404 Not Found
 
 ### Scale evidence
 
@@ -40,15 +40,11 @@ Fill **Assessed** with the grade you claim; **How to test** must falsify that nu
 
 | Quality | Assessed | How to test |
 | --- | --- | --- |
-| **Correctness** | 0 \| 5 | Acceptance tests for this feature |
-| **Scalability** | 0–3.5 | Scale evidence above. Not `ModularityTests`. |
-| **Engineering** | 0 \| 0.75 \| 1.5 | Hard gates: AI disclosure + `./gradlew check`. Then ADR + `ModularityTests`: both → **1.5**, one → **0.75**. |
+| **Correctness** | 5 | Todos los tests propuestos se ejecutan correctamente, y cubren los criterios de aceptacion propuestos. Se establece correctamente fecha de caducidad, que se comprueba al intentar acceder a un documento (no permitiendo acceder y borrando la url si esta caducada), no se permite crear url con fecha de caducidad negativa, y se utiliza el scheduler para eliminar periodicamente url caducadas |
+| **Scalability** | 0 | No probado |
+| **Engineering** | 1.5 | Se utiliza ./gradlew check para ejecutar los tests propuestos y todos se ejecutan correctamente. Modularity tests superados |
 
-**Indicative total:** _ / 10
+**Indicative total:** 5,75 / 10
 
 ### AI disclosure
-
-- **Tools / skills:** …
-- **Used for:** …
-- **Human-reviewed:** …
-- Or: **No AI assistance** was used for this feature.
+**No AI assistance** was used for this feature.
